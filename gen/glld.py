@@ -2,14 +2,15 @@
 
 import os
 import sys
-
 import xml.etree.ElementTree as ET
+
 
 path    = os.path.dirname(__file__)
 name    = 'glld.h'
 version = '2.1'
 author  = 'Jakub Oleksiak (yakubofficialmail@gmail.com)'
 licence = 'GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June 2007'
+
 
 gl_profile = 'core'
 
@@ -22,6 +23,7 @@ gl_version_list: list = [
     '4.0', '4.1', '4.2', '4.3', '4.4', '4.5', '4.6'
 ]
 
+
 # Source: https://en.wikipedia.org/wiki/OpenGL_ES#Versions
 gl_es_version = '3.2'
 gl_es_version_list: list = [
@@ -30,6 +32,7 @@ gl_es_version_list: list = [
     '3.0', '3.1', '3.2'
 ]
 
+
 # Source: https://en.wikipedia.org/wiki/OpenGL_SC
 gl_sc_version = '2.0'
 gl_sc_version_list: list = [
@@ -37,214 +40,10 @@ gl_sc_version_list: list = [
     '2.0'
 ]
 
-# ==========================
-# SECTION: xml parser - enum
-# ==========================
-
-class glEnum:
-    name: str
-    value: str
-    group: str
-
-    def __eq__(self, o):
-        return (self.name == o.name)
-
-
-def gl_parsexml_e(element: ET.Element) -> glEnum:
-    enum: glEnum
-
-    enum = glEnum()
-    enum.name  = element.get('name')
-    enum.value = element.get('value')
-    enum.group = element.get('group')
-    return (enum)
-
-
-# =============================
-# SECTION: xml parser - command
-# =============================
-
-class glCmdParam:
-    name: str
-    ptype: str
-    group: str
-    length: str
-
-
-class glCmdProto:
-    name: str
-    ptype: str
-
-
-class glCmd:
-    name: str
-    alias: str
-    proto: glCmdProto
-    params: list[glCmdParam]
-
-    def __eq__(self, o):
-        return (self.name == o.name)
-
-
-def gl_parsexml_c(element: ET.Element) -> glCmd:
-    cmd: glCmd
-
-    cmd = glCmd()
-    cmd.params = list()
-    for child in element:
-        if child.tag == 'proto':
-            cmd.proto = gl_parsexml_cproto(child)
-            cmd.name = child.find('name').text
-        elif child.tag == 'param':
-            cmd.params.append(gl_parsexml_cparam(child))
-        elif child.tag == 'alias':
-            cmd.alias = child.get('name')
-    return (cmd)
-
-
-def gl_parsexml_cproto(element: ET.Element) -> glCmdProto:
-    proto: glCmdProto
-
-    proto = glCmdProto()
-    proto.ptype = str()
-    proto.name = str()
-
-    if element.text:
-        proto.ptype += element.text.strip()
-
-    for child in element:
-        if child.tag == 'ptype':
-            if proto.ptype:
-                proto.ptype += ' '
-            proto.ptype += f'{child.text.strip()}'.rstrip()
-            if child.tail.strip():
-                proto.ptype += f' {child.tail.strip()}'.rstrip()
-
-        elif child.tag == 'name':
-            proto.name += child.text
-
-    if len(proto.ptype) == 0:
-        proto.ptype = f'{element.text.strip()}'
-        if element.tail.strip():
-            proto.ptype += f'{element.tail.strip()}'.rstrip()
-    return (proto)
-
-
-def gl_parsexml_cparam(element: ET.Element) -> glCmdParam:
-    param: glCmdParam
-
-    param = glCmdParam()
-    param.name = str()
-    param.ptype = str()
-    param.group = element.get('group')
-    # param.class = element.get('class')
-    param.length = element.get('len')
-
-    if element.text:
-        param.ptype += element.text
-    for child in element:
-        if child.tag == 'ptype':
-            param.ptype += f'{child.text.strip()} {child.tail.strip()}'.strip()
-        elif child.tag == 'name':
-            param.name += child.text
-    if len(param.ptype) == 0:
-        param.ptype = f'{element.text.strip()} {element.tail.strip()}'.strip()
-    return (param)
-
-
-# =============================
-# SECTION: xml parser - require
-# =============================
-
-class glReq:
-    types: list[str]
-    enums: list[str]
-    cmds: list[str]
-
-
-def gl_parsexml_r(element: ET.Element) -> glReq:
-    req = glReq()
-    req.types = list()
-    req.enums = list()
-    req.cmds = list()
-    for child in element:
-        if child.tag == 'type':
-            req.types.append(child.get('name'))
-        elif child.tag == 'enum':
-            req.enums.append(child.get('name'))
-        elif child.tag == 'command':
-            req.cmds.append(child.get('name'))
-    return (req)
-
-
-# =============================
-# SECTION: xml parser - feature
-# =============================
-
-class glFeat:
-    api: str
-    name: str
-    number: str
-    reqs: list[glReq]
-
-
-def gl_parsexml_f(element: ET.Element) -> glFeat:
-    feat: glFeat
-
-    feat = glFeat()
-    feat.api = element.get('api')
-    feat.name = element.get('name')
-    feat.number = element.get('number')
-    feat.reqs = list()
-
-    reqs = element.findall('require')
-    if len(reqs) == 0:
-        return (None)
-
-    for child in reqs:
-        reqs = gl_parsexml_r(child)
-        feat.reqs.append(reqs)
-    return (feat)
-
-
-# ================================
-# SECTION: xml parser - extensions
-# ================================
-
-class glExt:
-    name: str
-    supported: str
-    reqs: list[glReq]
-
-
-def gl_parsexml_ex(element: ET.Element) -> glExt:
-    ext: glExt
-
-    ext = glExt()
-    ext.name = element.get('name')
-    ext.supported= element.get('supported')
-    ext.reqs = list()
-
-    reqs = element.findall('require')
-    if len(reqs) == 0:
-        return (None)
-
-    for child in reqs:
-        reqs = gl_parsexml_r(child)
-        ext.reqs.append(reqs)
-    return (ext)
-
 
 # ===================
 # SECTION: xml parser
 # ===================
-
-class glParse:
-    enums: list[glEnum]
-    cmds: list[glCmd]
-    feats: list[glFeat]
-    exts: list[glExt]
-
 
 def gl_loadxml(filepath: str) -> ET.ElementTree:
     try:
@@ -255,44 +54,195 @@ def gl_loadxml(filepath: str) -> ET.ElementTree:
     return (tree)
 
 
-def gl_parsexml(tree: ET.ElementTree) -> glParse:
+def gl_parsexml(tree: ET.ElementTree):
     root = tree.getroot()
     if root.tag != 'registry':
         print(f'{__file__}: root error')
         sys.exit(1)
-    
-    parse = glParse()
-    parse.enums = list()
-    parse.cmds  = list()
-    parse.feats = list()
-    parse.exts  = list()
 
+    # 'parse' dictionary of parsed lists
+    parse = { 'enums'      : [],
+              'commands'   : [],
+              'feature'    : [],
+              'extensions' : [] }
+
+    # iterate over the 'registry' node
     for child in root:
 
         if child.tag == 'enums':
-            for enums in child.findall('enum'):
-                enum = gl_parsexml_e(enums)
-                if enum not in parse.enums:
-                    parse.enums.append(enum)
+            parse['enums'].append(gl_parsexml_enums(child))
 
         elif child.tag == 'commands':
-            for cmds in child.findall('command'):
-                cmd = gl_parsexml_c(cmds)
-                if cmd not in parse.cmds:
-                    parse.cmds.append(cmd)
+            parse['commands'].append(gl_parsexml_commands(child))
 
         elif child.tag == 'feature':
-            feat = gl_parsexml_f(child)
-            if feat is not None:
-                parse.feats.append(feat)
+            parse['feature'].append(gl_parsexml_feature(child))
 
         elif child.tag == 'extensions':
-            for exts in child.findall('extension'):
-                ext = gl_parsexml_ex(exts)
-                if ext is not None:
-                    parse.exts.append(ext)
+            parse['extensions'].append(gl_parsexml_extensions(child))
 
     return (parse)
+
+
+# ==========================
+# SECTION: xml parser - enum
+# ==========================
+
+def gl_parsexml_enums(element: ET.Element):
+    result = { 'name' : element.get('name'),
+               'type' : element.get('type'),
+               'enum' : [ ] }
+
+    # iterate over the every child in <enums>
+    for child in element:
+        if child.tag == 'enum':
+            item = { 'name'  : child.get('name'),
+                     'value' : child.get('value'),
+                     'group' : child.get('group') }
+
+            result['enum'].append(item)
+
+    return (result)
+
+
+# =============================
+# SECTION: xml parser - command
+# =============================
+
+def gl_parsexml_commands(element: ET.Element):
+    result = { 'namespace' : element.get('namespace'),
+               'command'   : [ ] }
+
+    # iterate over the every child in <commands>
+    for child in element:
+        if child.tag == 'command':
+            item = { 'name'  : None,
+                     'proto' : None,
+                     'param' : None,
+                     'alias' : None,
+                     'glx'   : None }
+
+            proto = child.find('proto')
+            if proto is not None:
+                item['name']  = proto.find('name').text
+                item['proto'] = gl_parsexml_proto(proto)
+            
+            alias = child.find('alias')
+            if alias is not None:
+                item['alias'] = alias.get('name')
+
+            glx = child.find('glx')
+            if glx is not None:
+                pass # ...
+
+            param = child.findall('param')
+            if param is not None:
+                item['param'] = gl_parsexml_param(param)
+
+            result['command'].append(item)
+   
+    return (result)
+
+
+def gl_parsexml_proto(element: ET.Element):
+    result = { 'ptype' : None,
+               'name'  : None }
+
+    if element.text:
+        result['ptype'] = element.text.strip()
+
+    for child in element:
+        if child.tag == 'ptype':
+            if result['ptype'] is not None:
+                result['ptype'] += ' '
+            result['ptype'] = f'{child.text.strip()}'.rstrip() 
+            if child.tail.strip():
+                result['ptype'] += f' {child.tail.strip()}'.rstrip()
+
+        elif child.tag == 'name':
+            result['name'] = child.text
+
+    return (result)
+
+
+def gl_parsexml_param(elements: list(ET.Element)):
+    result = [ ]
+    for element in elements:
+        param = { 'name'   : None,
+                  'ptype'  : None,
+                  'group'  : element.get('group'),
+                  'class'  : element.get('class'),
+                  'length' : element.get('len') }
+
+        if element.text:
+            param['ptype'] = element.text.strip()
+
+        for child in element:
+            if child.tag == 'ptype':
+                if param['ptype'] is not None:
+                    param['ptype'] += ' '
+                param['ptype'] = f'{child.text.strip()}'.rstrip() 
+                if child.tail.strip():
+                    param['ptype'] += f' {child.tail.strip()}'.rstrip()
+
+            elif child.tag == 'name':
+                param['name'] = child.text
+
+        result.append(param)
+
+    return (result)
+
+
+# =============================
+# SECTION: xml parser - require
+# =============================
+
+def gl_parsexml_require(element: ET.Element):
+    result = { 'type'    : [ ],
+               'enum'    : [ ],
+               'command' : [ ] }
+
+    for child in element:
+        if child.tag == 'type':
+            result['type'].append(child.get('name'))
+        elif child.tag == 'enum':
+            result['enum'].append(child.get('name'))
+        elif child.tag == 'command':
+            result['command'].append(child.get('name'))
+
+    return (result)
+
+# =============================
+# SECTION: xml parser - feature
+# =============================
+
+def gl_parsexml_feature(element: ET.Element):
+    result = { 'api'     : element.get('api'),
+               'name'    : element.get('name'),
+               'number'  : element.get('number'),
+               'require' : [ ] }
+
+    require = element.findall('require')
+    if require is not None:
+        result['require'].append(gl_parsexml_require(require))
+
+    return (result)
+
+
+# ================================
+# SECTION: xml parser - extensions
+# ================================
+
+def gl_parsexml_extensions(element: ET.Element):
+    result = { 'name'      : element.get('name'),
+               'supported' : element.get('supported'),
+               'require'   : [ ] }
+
+    require = element.findall('require')
+    if require is not None:
+        result['require'].append(gl_parsexml_require(require))
+
+    return (result)
 
 
 # ===============

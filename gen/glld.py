@@ -2,21 +2,20 @@
 
 import os
 import sys
-import getopt
 
 import xml.etree.ElementTree as ET
 
-g_path    = os.path.dirname(__file__)
-g_name    = 'glld.h'
-g_version = '2.1'
-g_author  = 'Jakub Oleksiak (yakubofficialmail@gmail.com)'
-g_licence = 'GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June 2007'
+path    = os.path.dirname(__file__)
+name    = 'glld.h'
+version = '2.1'
+author  = 'Jakub Oleksiak (yakubofficialmail@gmail.com)'
+licence = 'GNU LESSER GENERAL PUBLIC LICENSE Version 3, 29 June 2007'
 
-g_gl_profile = 'core'
+gl_profile = 'core'
 
 # Source: https://en.wikipedia.org/wiki/OpenGL#History
-g_gl_version = '4.6'
-g_gl_version_list: list = [
+gl_version = '4.6'
+gl_version_list: list = [
     '1.0', '1.1', '1.2', '1.2.1', '1.3', '1.4', '1.5',
     '2.0', '2.1',
     '3.0', '3.1', '3.2', '3.3',
@@ -24,16 +23,16 @@ g_gl_version_list: list = [
 ]
 
 # Source: https://en.wikipedia.org/wiki/OpenGL_ES#Versions
-g_gl_es_version = '3.2'
-g_gl_es_version_list: list = [
+gl_es_version = '3.2'
+gl_es_version_list: list = [
     '1.0', '1.1',
     '2.0',
     '3.0', '3.1', '3.2'
 ]
 
 # Source: https://en.wikipedia.org/wiki/OpenGL_SC
-g_gl_sc_version = '2.0'
-g_gl_sc_version_list: list = [
+gl_sc_version = '2.0'
+gl_sc_version_list: list = [
     '1.0',
     '2.0'
 ]
@@ -303,31 +302,31 @@ def gl_parsexml(tree: ET.ElementTree) -> glParse:
 def opengl_loader(parse: glParse):
     # open and read 'template.h'
     fstr = ''
-    with open(f'{g_path}/template.h') as f:
+    with open(f'{path}/template.h') as f:
         fstr = f.read()
 
     # Simple templates...
 
     # <<glld-author>>
-    fstr = fstr.replace('<<glld-author>>', g_author)
+    fstr = fstr.replace('<<glld-author>>', author)
 
     # <<glld-version>>
-    fstr = fstr.replace('<<glld-version>>', g_version)
+    fstr = fstr.replace('<<glld-version>>', version)
 
     # <<glld-licence>>
-    fstr = fstr.replace('<<glld-licence>>', g_licence)
+    fstr = fstr.replace('<<glld-licence>>', licence)
 
     # <<glld-profile>>
-    fstr = fstr.replace('<<glld-gl-profile>>', g_gl_profile)
+    fstr = fstr.replace('<<glld-gl-profile>>', gl_profile)
 
     # <<glld-glversion>>
-    fstr = fstr.replace('<<glld-gl-version>>', g_gl_version)
+    fstr = fstr.replace('<<glld-gl-version>>', gl_version)
 
     # <<glld-glesversion>>
-    fstr = fstr.replace('<<glld-gl-es-version>>', g_gl_es_version)
+    fstr = fstr.replace('<<glld-gl-es-version>>', gl_es_version)
 
     # <<glld-glscversion>>
-    fstr = fstr.replace('<<glld-gl-sc-version>>', g_gl_es_version)
+    fstr = fstr.replace('<<glld-gl-sc-version>>', gl_es_version)
 
     # Advanced templates...
     
@@ -708,7 +707,7 @@ def glld_gl_func_nameaddr(parse: glParse):
 
 if __name__ == '__main__':
     try:
-        tree = gl_loadxml(f'{g_path}/xml/gl.xml')
+        tree = gl_loadxml(f'{path}/xml/gl.xml')
         parse = gl_parsexml(tree)
         opengl_loader(parse)
     except Exception as err:

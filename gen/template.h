@@ -13,86 +13,6 @@
  *      - version: <<glld-gl-es-version>> (OpenGL ES)
  *      - version: <<glld-gl-sc-version>> (OpenGL SC)
  *
- *
- *  Configuration (can be defined by user):
- *
- *      #define GLLD_IMPLEMENTATION
- *          - TYPE: MANDATORY
- *          - DESCRIPTION: Embed the implementation section of the library into the source file.
- *                         NOTE:
- *                             This should be defined only once in the entire codebase.
- *                             Otherwise, defining this option will cause a multiple-definitions error.
- *
- *      #define GLLD_VERBOSE
- *          - TYPE: OPTIONAL
- *          - DESCRIPTION: Enables info/warning/error logging to standard-output/standard-error.
- *  
- *      #define GLLD_VERBOSE_INFO
- *          - TYPE: OPTIONAL
- *          - DESCRIPTION: Enables info-logging to standard-output.
- *                         Enabled by default if GLLD_VERBOSE is defined.
- *
- *      #define GLLD_VERBOSE_WARN
- *          - TYPE: OPTIONAL
- *          - DESCRIPTION: Enables warning-logging to standard-output.
- *                         Enabled by default if GLLD_VERBOSE is defined.
- *
- *      #define GLLD_VERBOSE_ERROR
- *          - TYPE: OPTIONAL
- *          - DESCRIPTION: Enables error-logging to standard-error.
- *                         Enabled by default if GLLD_VERBOSE is defined.
- *
- *
- *  Constants (MUST NOT be defined by user):
- *
- *      GLLD_PLATFORM
- *          - TYPE: String
- *          - DESCRIPTION: Name of the platform glld.h is used on as a string, compile detected.
- *
- *      GLLD_VERSION
- *          - TYPE: String
- *          - DESCRIPTION: Current version of glld.h header file as a string.
- *
- *      GLLD_GL_PROFILE
- *          - TYPE: String
- *          - DESCRIPTION: Default profile of OpenGL and OpenGLES handled by glld.h.
- *
- *      GLLD_GL_VERSION
- *          - TYPE: String
- *          - DESCRIPTION: Default version of OpenGL handled by glld.h.
- *
- *      GLLD_GLES_VERSION
- *          - TYPE: String
- *          - DESCRIPTION: Default version of OpenGLES handled by glld.h.
- *
- *      GLLD_GLSC_VERSION
- *          - TYPE: String
- *          - DESCRIPTION: Default version of OpenGLSC handled by glld.h.
- *
- *      GL_VERSION_...
- *          - TYPE: Integer
- *          - DESCRIPTION: Compile-time version detection of OpenGL.
- *
- *
- *  Summary and Notes:
- *
- *      This is glld.h: single-header only OpenGL loader for Windows, MacOS and Linux systems.
- *      The goal of this library is simple: provide users with drag-n-drop solution for loading
- *      legacy and modern OpenGL and OpenGLES functions.
- *
- *      glld.h is generated based on the OpenGL Registry, hosted by KhronosGroup.
- *      Generator is made in python3 on GNU/Linux platform. It works with latest python3 versios.
- *      Source:
- *      - https://github.com/KhronosGroup/OpenGL-Registry.git
- *
- *      This project is heavily inspired by the following projects:
- *      - nothings/stb: https://github.com/nothings/stb.git
- *      - Dav1dde/glad: https://github.com/Dav1dde/glad.git
- *      - macron/glbind: https://github.com/mackron/glbind.git
- *
- *      Cheers,
- *          <<glld-author>>
- *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #if defined (__cplusplus)
@@ -180,19 +100,31 @@
 # endif /* GLINT */
 #
 # /* Define platform macros */
-# if defined (__linux__)
+# if defined (__linux__) || \
+     defined (__gnu_linux__)
 #  define GLLD_PLATFORM "linux"
 #  define GLLD_PLATFORM_LINUX 1
 #
-# elif defined (__APPLE__) || defined (__MACH__)
+# elif defined (__APPLE__) || \
+       defined (__MACH__)
 #  define GLLD_PLATFORM "apple"
 #  define GLLD_PLATFORM_APPLE 1
 #
-# elif defined (__CYGWIN__) || defined (_WIN32)
-#  define GLLD_PLATFORM "win32"
-#  define GLLD_PLATFORM_WIN32 1
+# elif defined (_WIN16)      || \
+       defined (_WIN32)      || \
+       defined (_WIN64)      || \
+       defined (__MINGW32__) || \
+       defined (__MINGW64__) || \
+       defined (__CYGWIN__)  || \
+       defined (__MSYS__)
+#  define GLLD_PLATFORM "windows"
+#  define GLLD_PLATFORM_WINDOWS 1
 #
-# elif defined (__FreeBSD__) || defined (__NetBSD__) || defined (__bsdi__) || defined (__DragonFly__) || defined (__MidnightBSD__)
+# elif defined (__bsdi__)       || \
+       defined (__FreeBSD__)    || \
+       defined (__NetBSD__)     || \
+       defined (__DragonFly__)  || \
+       defined (__MidnightBSD__)
 #  define GLLD_PLATFORM "bsd"
 #  define GLLD_PLATFORM_BSD 1
 #
@@ -200,20 +132,20 @@
 #  error /* No valid platform found */
 # endif
 #
-#  if !defined (__cplusplus)
+# if !defined (__cplusplus)
 #   include <assert.h>
 #   include <stdio.h>
 #   include <stdint.h>
 #   include <stddef.h>
 #   include <sys/types.h>
-#  else
+# else
 #   include <cassert>
 #   include <string>
 #   include <cstdio>
 #   include <cstdint>
 #   include <cstddef>
 #   include <sys/types.h>
-#  endif
+# endif
 #
 # if defined (__cplusplus)
 
@@ -301,39 +233,42 @@ typedef void (APIENTRY *GLVULKANPROCNV)(void);
 }
 
 # endif /* __cplusplus */
-#
 #endif /* _glld_h_ */
 #
 #if defined (GLLD_IMPLEMENTATION)
+# if !defined (_glld_impl_h_)
+#  define _glld_impl_h_ 1
 #
-# if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_APPLE) || defined (GLLD_PLATFORM_BSD)
-#  include <dlfcn.h>
-# endif
+#  if defined (GLLD_PLATFORM_LINUX) || \
+      defined (GLLD_PLATFORM_APPLE) || \
+      defined (GLLD_PLATFORM_BSD)
+#   include <dlfcn.h>
+#  endif
 #
-# if defined (GLLD_PLATFORM_WIN32)
-#  include <libloaderapi.h>
-# endif
+#  if defined (GLLD_PLATFORM_WINDOWS)
+#   include <libloaderapi.h>
+#  endif
 #
-# if defined (GLLD_VERBOSE)
-#  define GLLD_VERBOSE_INFO 1
-#  define GLLD_VERBOSE_WARN 1
-#  define GLLD_VERBOSE_ERROR 1
-# endif
+#  if defined (GLLD_VERBOSE)
+#   define GLLD_VERBOSE_INFO 1
+#   define GLLD_VERBOSE_WARN 1
+#   define GLLD_VERBOSE_ERROR 1
+#  endif
 #
-# if defined (__cplusplus)
+#  if defined (__cplusplus)
 
 extern "C" {
 
-# endif /* __cplusplus */
+#  endif /* __cplusplus */
     
 /* key-value pair array of OpenGL functions */
 struct s_nameaddr {
 
-# if !defined (__cplusplus)
+#  if !defined (__cplusplus)
     const char *name;
-# else
+#  else
     const std::string &name;
-# endif /* __cplusplus */
+#  endif /* __cplusplus */
 
     void **addr;
 };
@@ -459,11 +394,11 @@ GLINT void *__glld_dlopen(const char *name) {
     if (!name) { return (0); }
 
     /* platform-dependant dynamic object loading */
-# if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
+#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
     void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
-# elif defined (GLLD_PLATFORM_WIN32)
+#  elif defined (GLLD_PLATFORM_WINDOWS)
     HMODULE handle = LoadLibraryA(handle);
-# endif
+#  endif
 
     /* check if 'handle' is loaded */
     if (!handle) {
@@ -480,11 +415,11 @@ GLINT void *__glld_dlsym(void *handle, const char *symbol) {
     if (!symbol) { return (0); }
 
     /* platform-dependant dynamic symbol loading */
-# if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
+#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
     void *proc = dlsym(handle, symbol);
-# elif defined (GLLD_PLATFORM_WIN32)
+#  elif defined (GLLD_PLATFORM_WINDOWS)
     HMODULE proc = GetProcAddress(handle, symbol);
-# endif
+#  endif
 
     /* check if 'proc' was found */
     if (!proc) {
@@ -500,11 +435,11 @@ GLINT int __glld_dlclose(void *handle) {
     if (!handle) { return (0); }
 
     /* platform-dependant dynamic object unloading */
-# if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
+#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
     dlclose(handle);
-# elif defined (GLLD_PLATFORM_WIN32)
+#  elif defined (GLLD_PLATFORM_WINDOWS)
     FreeLibrary(handle);
-# endif
+#  endif
 
     return (1);
 }
@@ -527,11 +462,11 @@ GLAPI int glld_loader(glld_loader_t load) {
         /* If the function is already loaded, skip it... */
         if (*_nameaddr[i].addr) { continue; }
 
-# if !defined (__cplusplus)
+#  if !defined (__cplusplus)
         *_nameaddr[i].addr = load(_nameaddr[i].name);
-# else
+#  else
         *_nameaddr[i].addr = load(_nameaddr[i].name.c_str());
-# endif /* __cplusplus */
+#  endif /* __cplusplus */
 
         if (!*_nameaddr[i].addr) { return (0); }
     }
@@ -543,21 +478,21 @@ GLAPI int glld_loader(glld_loader_t load) {
 GLAPI void *glld_get_proc_address(const char *name) {
     const char *libgl[] = {
 
-# if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD)
+#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD)
         "libGL.so",
         "libGL.so.1",
         "libGL.so.1.7.0",
         0
-# elif defined (GLLD_PLATFORM_APPLE)
+#  elif defined (GLLD_PLATFORM_APPLE)
         "../Frameworks/OpenGL.framework/OpenGL",
         "/Library/Frameworks/OpenGL.framework/OpenGL",
         "/System/Library/Frameworks/OpenGL.framework/OpenGL",
         "/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL"
         0
-# elif defined (GLLD_PLATFORM_WIN32)
+#  elif defined (GLLD_PLATFORM_WINDOWS)
         "opengl32.dll",
         0
-# endif
+#  endif
 
     };
    
@@ -573,9 +508,9 @@ GLAPI void *glld_get_proc_address(const char *name) {
     /* check if libGL.so / opengl32.dll */
     if (!handle) {
 
-# if defined (GLLD_VERBOSE_ERROR)
+#  if defined (GLLD_VERBOSE_ERROR)
         fprintf(stderr, "glld.h: could not load an OpenGL handle.\n");
-# endif
+#  endif
 
         return (0);
     }
@@ -584,9 +519,9 @@ GLAPI void *glld_get_proc_address(const char *name) {
     void *proc = __glld_dlsym(handle, name);
     if (!proc) {
 
-# if defined (GLLD_VERBOSE_ERROR)
+#  if defined (GLLD_VERBOSE_ERROR)
         fprintf(stderr, "glld.h: could not load a procedure: %s\n", name);
-# endif
+#  endif
     
         return (0);
     }
@@ -599,10 +534,10 @@ GLAPI void *glld_get_proc_address(const char *name) {
 
 <<glld-gl-func-declr-0>>
 
-# if defined (__cplusplus)
+#  if defined (__cplusplus)
 
 }
 
-# endif /* __cplusplus */
-#
+#  endif /* __cplusplus */
+# endif /* _glld_impl_h_ */
 #endif /* GLLD_IMPLEMENTATION */

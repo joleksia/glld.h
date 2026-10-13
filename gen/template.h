@@ -153,7 +153,7 @@ extern "C" {
 
 # endif
 
-/* SECTION: glld */
+/* glld.h */
 
 typedef void *(*glld_loader_t) (const char *);
 
@@ -165,9 +165,17 @@ GLAPI int glld_loader(glld_loader_t);
 
 GLAPI void *glld_get_proc_address(const char *);
 
-/* SECTION: OpenGL */
+/* OpenGL */
 
-/* OpenGL standard types */
+/* OpenGL versions */
+
+/* {{{ */
+<<glld-gl-macros>>
+/* }}} */
+
+/* OpenGL types */
+
+/* {{{ */
 typedef unsigned int GLenum;
 typedef unsigned char GLboolean;
 typedef unsigned int GLbitfield;
@@ -210,23 +218,23 @@ typedef void (APIENTRY *GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLen
 typedef void (APIENTRY *GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
 typedef void (APIENTRY *GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);
 typedef void (APIENTRY *GLVULKANPROCNV)(void);
+/* }}} */
 
-/* OpenGL function declarations */
-<<glld-gl-func-ptr>>
+/* OpenGL enums */
 
-# /* OpenGL version macros */
-<<glld-gl-version-macros>>
-#
-# /* OpenGL extension macros */
-<<glld-gl-extension-macros>>
-#
-# /* OpenGL enums */
+/* {{{ */
 <<glld-gl-enums>>
-#
-# /* OpenGL functions */
-<<glld-gl-func-macros>>
+/* }}} */
 
-<<glld-gl-func-declr-1>>
+/* OpenGL functions */
+
+/* {{{ */
+<<glld-gl-functions>>
+/* }}} */
+
+/* {{{ */
+<<glld-gl-function-macros>>
+/* }}} */
 
 # if defined (__cplusplus)
 
@@ -262,7 +270,7 @@ extern "C" {
 #  endif /* __cplusplus */
     
 /* key-value pair array of OpenGL functions */
-struct s_nameaddr {
+struct glld_glapi_s {
 
 #  if !defined (__cplusplus)
     const char *name;
@@ -273,16 +281,18 @@ struct s_nameaddr {
     void **addr;
 };
 
-static struct s_nameaddr _nameaddr[] = {
-    
-<<glld-gl-func-nameaddr>>
+static struct glld_glapi_s _glld_glapi[] = {
+   
+    /* {{{ */ 
+<<glld-gl-function-array>>
+    /* }}} */
 
     /* ... */
 
     { "", 0 }
 };
 
-/* SECTION: glld */
+/* glld.h */
 
 typedef void *(*GLLDPFNGLXGETPROCADDRESSPROC) (const char *);
 GLLDPFNGLXGETPROCADDRESSPROC _glld_glXGetProcAddress = 0;
@@ -458,17 +468,17 @@ GLAPI int glld_unload(void) {
 
 GLAPI int glld_loader(glld_loader_t load) {
     if (!load) { return (0); }
-    for (size_t i = 0; _nameaddr[i].addr; i++) {
+    for (size_t i = 0; _glld_glapi[i].addr; i++) {
         /* If the function is already loaded, skip it... */
-        if (*_nameaddr[i].addr) { continue; }
+        if (*_glld_glapi[i].addr) { continue; }
 
 #  if !defined (__cplusplus)
-        *_nameaddr[i].addr = load(_nameaddr[i].name);
+        *_glld_glapi[i].addr = load(_glld_glapi[i].name);
 #  else
-        *_nameaddr[i].addr = load(_nameaddr[i].name.c_str());
+        *_glld_glapi[i].addr = load(_glld_glapi[i].name.c_str());
 #  endif /* __cplusplus */
 
-        if (!*_nameaddr[i].addr) { return (0); }
+        if (!*_glld_glapi[i].addr) { return (0); }
     }
 
     return (1);
@@ -530,9 +540,13 @@ GLAPI void *glld_get_proc_address(const char *name) {
     return (proc);
 }
 
-/* SECTION: OpenGL */
+/* OpenGL */
 
-<<glld-gl-func-declr-0>>
+/* OpenGL functions */
+
+/* {{{ */
+<<glld-gl-function-declarations>>
+/* }}} */
 
 #  if defined (__cplusplus)
 

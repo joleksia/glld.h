@@ -78,7 +78,7 @@ int main(void) {
     glDeleteShader(sh_f), sh_f = 0;
 
 
-    GLuint vao,
+    GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 

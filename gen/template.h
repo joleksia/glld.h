@@ -23,6 +23,8 @@
 # define _glld_h_ 1
 #
 # define GLLD_VERSION "<<glld-version>>"
+# define GLLD_VERSION_MAJOR <<glld-version-major>>
+# define GLLD_VERSION_MINOR <<glld-version-minor>>
 #
 # if defined (__gl_h_)
 #  error "#include <GL/gl.h> detected. To ensure a proper usage of this loader, remove the include."
@@ -134,6 +136,7 @@
 #
 # if !defined (__cplusplus)
 #   include <assert.h>
+#   include <string.h>
 #   include <stdio.h>
 #   include <stdint.h>
 #   include <stddef.h>
@@ -157,11 +160,49 @@ extern "C" {
 
 typedef void *(*glld_loader_t) (const char *);
 
-GLAPI int glld_load(void);
 
-GLAPI int glld_unload(void);
+typedef struct glld_s glld_t;
 
-GLAPI int glld_loader(glld_loader_t);
+struct glld_s {
+    
+    /* glld version */
+    
+    struct {
+
+        int major;
+        int minor;
+
+    } version;
+
+    /* OpenGL struct */
+
+    struct {
+        
+        /* OpenGL version */
+
+        struct {
+
+            int major;
+            int minor;
+
+        } version;
+
+        /* OpenGL backend handle */
+        
+        void *libEGL,
+             *libGLX,
+             *libWGL;
+
+    } gl;
+
+};
+
+
+GLAPI int glld_load(glld_t *);
+
+GLAPI int glld_loader(glld_t *, glld_loader_t);
+
+GLAPI int glld_unload(glld_t *);
 
 GLAPI void *glld_get_proc_address(const char *);
 
@@ -294,16 +335,7 @@ static struct glld_glapi_s _glld_glapi[] = {
 
 /* glld.h */
 
-typedef void *(*GLLDPFNGLXGETPROCADDRESSPROC) (const char *);
-GLLDPFNGLXGETPROCADDRESSPROC _glld_glXGetProcAddress = 0;
-
-typedef void (*__glld_eglMustCastToProperFunctionPointerType)(void);
-typedef __glld_eglMustCastToProperFunctionPointerType (*GLLDPFNEGLGETPROCADDRESSPROC) (const char *);
-GLLDPFNEGLGETPROCADDRESSPROC _glld_eglGetProcAddress = 0;
-
-typedef void *(*GLLDPFNWGLGETPROCADDRESSPROC) (const char *);
-GLLDPFNWGLGETPROCADDRESSPROC _glld_wglGetProcAddress = 0;
-
+/* static API */
 
 GLINT void *__glld_dlopen(const char *);
 
@@ -311,113 +343,213 @@ GLINT void *__glld_dlsym(void *, const char *);
 
 GLINT int __glld_dlclose(void *);
 
-GLAPI int glld_load(void) {
-    /* libGLX */
-    const char *libglx[] = {
-        "libGLX.so", "libGLX.so.0", "libGLX.so.0.0.0", 0
-    };
+/* public API */
 
-    void *handle = 0;
-    /* attempt to load libGLX.so */
-    for (size_t i = 0; libglx[i]; i++) {
-        handle = __glld_dlopen(libglx[i]);
-        if (handle) {
-            break;
-        }
-    }
+GLAPI int glld_load(glld_t *glld) {
+    /* null-check */
+    if (!glld) { return (0); }
 
-    /* if libGLX.so loaded */
-    if (handle) {
-        _glld_glXGetProcAddress = (GLLDPFNGLXGETPROCADDRESSPROC) __glld_dlsym(handle, "glXGetProcAddress");
-        if (_glld_glXGetProcAddress) {
-            int status = glld_loader((glld_loader_t) _glld_glXGetProcAddress);
-            if (status) {
-                return (status);
-            }
-        }
+    /* clear 'glld' */
+    memset(glld, 0, sizeof(glld_t));
 
-        __glld_dlclose(handle);
-    }
+    /* get the 'load' function */
+    glld_loader_t load = 0;
 
-    /* libEGL */
-    const char *libegl[] = {
-        "libEGL.so", "libEGL.so.1", "libEGL.so.1.1.0", 0
-    };
+    /* try to load EGL */
+    const char *libegl[] = { "libEGL.so",
+                             "libEGL.so.1",
+                             "libEGL.so.1.1.0",
+                             0 };
 
-    handle = 0;
-    /* attempt to load libEGL.so */
-    for (size_t i = 0; libegl[i]; i++) {
-        handle = __glld_dlopen(libegl[i]);
-        if (handle) {
-            break;
-        }
-    }
-
-    /* if libEGL.so loaded */
-    if (handle) {
-        _glld_eglGetProcAddress = (GLLDPFNEGLGETPROCADDRESSPROC) __glld_dlsym(handle, "eglGetProcAddress");
-        if (_glld_eglGetProcAddress) {
-            int status = glld_loader((glld_loader_t) _glld_eglGetProcAddress);
-            if (status) {
-                return (status);
-            }
-        }
-
-        __glld_dlclose(handle);
+    for (const char **s = libegl; s; s++) {
+        glld->gl.libEGL = __glld_dlopen(*s);
+        if (glld->gl.libEGL) { break; }
     }
     
-    /* opengl32 */
-    const char *opengl32[] = {
-        "opengl32.dll", 0
-    };
-    
-    handle = 0;
-    /* attempt to load opengl32.dll */
-    for (size_t i = 0; opengl32[i]; i++) {
-        handle = __glld_dlopen(opengl32[i]);
-        if (handle) {
-            break;
+    /* try to load 'eglGetProcAddress' symbol */
+    if (!load && glld->gl.libEGL) {
+        load = __glld_dlsym(glld->gl.libEGL, "eglGetProcAddress");
+
+        /* 'load' succeed */
+        if (load) {
+            /* load OpenGL */
+            return (glld_loader(glld, load));
         }
     }
 
-    /* if opengl32.dll loaded */
-    if (handle) {
-        _glld_wglGetProcAddress = (GLLDPFNWGLGETPROCADDRESSPROC) __glld_dlsym(handle, "wglGetProcAddress");
-        if (_glld_wglGetProcAddress) {
-            int status = glld_loader((glld_loader_t) _glld_wglGetProcAddress);
-            if (status) {
-                return (status);
-            }
-        }
+    /* try to load GLX */
+    const char *libglx[] = { "libGLX.so",
+                             "libGLX.so.0",
+                             "libGLX.so.0.0.0",
+                             0 };
 
-        __glld_dlclose(handle);
+    for (const char **s = libglx; s; s++) {
+        glld->gl.libGLX = __glld_dlopen(*s);
+        if (glld->gl.libGLX) { break; }
     }
     
-    /* no library was loaded...
-     * ...perform manual loading from existing libGL.so / opengl32.dll.
-     * */
-    return (glld_loader((glld_loader_t) glld_get_proc_address));
+    /* try to load 'glXGetProcAddress' symbol */
+    if (!load && glld->gl.libGLX) {
+        load = __glld_dlsym(glld->gl.libEGL, "glXGetProcAddress");
+    
+        /* if failed, try to load 'glXGetProcAddressARB' symbol */
+        if (!load) {
+            load = __glld_dlsym(glld->gl.libEGL, "glXGetProcAddressARB");
+        }
+
+        /* 'load' succeed */
+        if (load) {
+            /* load OpenGL */
+            return (glld_loader(glld, load));
+        }
+    }
+    
+    /* try to load WGL */
+    const char *opengl32[] = { "opengl32.dll",
+                               0 };
+
+    for (const char **s = opengl32; s; s++) {
+        glld->gl.libWGL = __glld_dlopen(*s);
+        if (glld->gl.libWGL) { break; }
+    }
+    
+    /* try to load 'wglGetProcAddress' symbol */
+    if (!load && glld->gl.libWGL) {
+        load = __glld_dlsym(glld->gl.libEGL, "wglGetProcAddress");
+
+        /* 'load' succeed */
+        if (load) {
+            /* load OpenGL */
+            return (glld_loader(glld, load));
+        }
+    }
+    
+    /* fallback */
+    return (glld_loader(glld, (glld_loader_t) glld_get_proc_address));
 }
+
+
+GLAPI int glld_loader(glld_t *glld, glld_loader_t load) {
+    /* null-check */
+    if (!glld) { return (0); }
+    if (!load) { return (0); }
+
+    /* clear version numbers */
+    glld->version.major = 0;
+    glld->version.minor = 0;
+    glld->gl.version.major = 0;
+    glld->gl.version.minor = 0;
+
+    /* 'load' OpenGL functions */
+    for (size_t i = 0; _glld_glapi[i].addr; i++) {
+        /* check if 'addr' already loaded */
+        if (*_glld_glapi[i].addr) { continue; }
+
+        /* 'load' OpenGL function */
+# if !defined (__cplusplus)
+        *_glld_glapi[i].addr = load(_glld_glapi[i].name);
+
+# else
+        *_glld_glapi[i].addr = load(_glld_glapi[i].name.c_str());
+
+# endif /* __cplusplus */
+
+        /* null-check */
+        if (!_glld_glapi[i].addr) { return (0); }
+    } 
+
+    /* return glld.h version */
+    glld->version.major = GLLD_VERSION_MAJOR;
+    glld->version.minor = GLLD_VERSION_MINOR;
+
+    /* return OpenGL version */
+    glGetIntegerv(GL_MAJOR_VERSION, &glld->gl.version.major);
+    glGetIntegerv(GL_MINOR_VERSION, &glld->gl.version.minor);
+
+    /* success */
+    return (1);
+}
+
+
+GLAPI int glld_unload(glld_t *glld) {
+    /* null-check */
+    if (!glld) { return (0); }
+
+    /* unload OpenGL backend handles */
+    void *libEGL = glld->gl.libEGL,
+         *libGLX = glld->gl.libGLX,
+         *libWGL = glld->gl.libWGL;
+    if (libEGL) { __glld_dlclose(libEGL); }
+    if (libGLX) { __glld_dlclose(libGLX); }
+    if (libWGL) { __glld_dlclose(libWGL); }
+
+    /* clear 'glld' */
+    memset(glld, 0, sizeof(glld_t));
+
+    /* success */
+    return (1);
+}
+
+
+GLAPI void *glld_get_proc_address(const char *name) {
+    const char *libGL[] = { /* unix handles */
+                            "libGL.so",
+                            "libGL.so.1",
+                            "libGL.so.1.7.0",
+
+                            /* MacOS handles */
+                            "/Library/Frameworks/OpenGL.framework/OpenGL",
+                            "/System/Library/Frameworks/OpenGL.framework/OpenGL",
+                            "/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL"
+
+                            /* Windows handles */
+                            "opengl32.dll",
+
+                            /* null-terminator */
+                            0 };
+   
+    /* try to load libGL */
+    static void *handle = 0;
+    if (!handle) {
+        for (size_t i = 0; libGL[i]; i++) {
+            handle = __glld_dlopen(libGL[i]);
+            if (handle) {
+                break;
+            }
+        }
+    }
+
+    /* null-check */
+    if (!handle) { return (0); }
+    
+    /* try to load 'name' using 'handle' */
+    void *proc = __glld_dlsym(handle, name);
+
+    /* return 'proc' */
+    return (proc);
+}
+
+/* static API */
 
 GLINT void *__glld_dlopen(const char *name) {
     /* null-check */
     if (!name) { return (0); }
 
     /* platform-dependant dynamic object loading */
-#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
+#  if defined (GLLD_PLATFORM_LINUX) || \
+      defined (GLLD_PLATFORM_BSD)   || \
+      defined (GLLD_PLATFORM_APPLE)
     void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+
 #  elif defined (GLLD_PLATFORM_WINDOWS)
     HMODULE handle = LoadLibraryA(handle);
+
 #  endif
 
-    /* check if 'handle' is loaded */
-    if (!handle) {
-        return (0);
-    }
-
-    /* success */
+    /* return 'handle' */
     return (handle);
 }
+
 
 GLINT void *__glld_dlsym(void *handle, const char *symbol) {
     /* null-check */
@@ -425,119 +557,37 @@ GLINT void *__glld_dlsym(void *handle, const char *symbol) {
     if (!symbol) { return (0); }
 
     /* platform-dependant dynamic symbol loading */
-#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
+#  if defined (GLLD_PLATFORM_LINUX) || \
+      defined (GLLD_PLATFORM_BSD)   || \
+      defined (GLLD_PLATFORM_APPLE)
     void *proc = dlsym(handle, symbol);
+
 #  elif defined (GLLD_PLATFORM_WINDOWS)
     HMODULE proc = GetProcAddress(handle, symbol);
+
 #  endif
 
-    /* check if 'proc' was found */
-    if (!proc) {
-        return (0);
-    }
-
-    /* success */
+    /* return 'proc' */
     return (proc);
 }
+
 
 GLINT int __glld_dlclose(void *handle) {
     /* null-check */
     if (!handle) { return (0); }
 
     /* platform-dependant dynamic object unloading */
-#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD) || defined (GLLD_PLATFORM_APPLE)
+#  if defined (GLLD_PLATFORM_LINUX) || \
+      defined (GLLD_PLATFORM_BSD)   || \
+      defined (GLLD_PLATFORM_APPLE)
     dlclose(handle);
+
 #  elif defined (GLLD_PLATFORM_WINDOWS)
     FreeLibrary(handle);
+
 #  endif
 
     return (1);
-}
-
-
-GLAPI int glld_unload(void) {
-    /* unload all the handles that could've been loaded for this library */
-    __glld_dlclose((void *) _glld_glXGetProcAddress), _glld_glXGetProcAddress = 0;
-    __glld_dlclose((void *) _glld_eglGetProcAddress), _glld_eglGetProcAddress = 0;
-    __glld_dlclose((void *) _glld_wglGetProcAddress), _glld_wglGetProcAddress = 0;
-
-    /* success */
-    return (1);
-}
-
-
-GLAPI int glld_loader(glld_loader_t load) {
-    if (!load) { return (0); }
-    for (size_t i = 0; _glld_glapi[i].addr; i++) {
-        /* If the function is already loaded, skip it... */
-        if (*_glld_glapi[i].addr) { continue; }
-
-#  if !defined (__cplusplus)
-        *_glld_glapi[i].addr = load(_glld_glapi[i].name);
-#  else
-        *_glld_glapi[i].addr = load(_glld_glapi[i].name.c_str());
-#  endif /* __cplusplus */
-
-        if (!*_glld_glapi[i].addr) { return (0); }
-    }
-
-    return (1);
-}
-
-
-GLAPI void *glld_get_proc_address(const char *name) {
-    const char *libgl[] = {
-
-#  if defined (GLLD_PLATFORM_LINUX) || defined (GLLD_PLATFORM_BSD)
-        "libGL.so",
-        "libGL.so.1",
-        "libGL.so.1.7.0",
-        0
-#  elif defined (GLLD_PLATFORM_APPLE)
-        "../Frameworks/OpenGL.framework/OpenGL",
-        "/Library/Frameworks/OpenGL.framework/OpenGL",
-        "/System/Library/Frameworks/OpenGL.framework/OpenGL",
-        "/System/Library/Frameworks/OpenGL.framework/Versions/Current/OpenGL"
-        0
-#  elif defined (GLLD_PLATFORM_WINDOWS)
-        "opengl32.dll",
-        0
-#  endif
-
-    };
-   
-    /* try to load libGL.so / opengl32.dll */
-    static void *handle = 0;
-    for (size_t i = 0; libgl[i]; i++) {
-        handle = __glld_dlopen(libgl[i]);
-        if (handle) {
-            break;
-        }
-    }
-
-    /* check if libGL.so / opengl32.dll */
-    if (!handle) {
-
-#  if defined (GLLD_VERBOSE_ERROR)
-        fprintf(stderr, "glld.h: could not load an OpenGL handle.\n");
-#  endif
-
-        return (0);
-    }
-    
-    /* try to load 'name' symbol from 'handle' */
-    void *proc = __glld_dlsym(handle, name);
-    if (!proc) {
-
-#  if defined (GLLD_VERBOSE_ERROR)
-        fprintf(stderr, "glld.h: could not load a procedure: %s\n", name);
-#  endif
-    
-        return (0);
-    }
-
-    /* success */
-    return (proc);
 }
 
 /* OpenGL */

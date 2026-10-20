@@ -265,6 +265,8 @@ def opengl_loader(parse):
 
     fstr = fstr.replace('<<glld-author>>',        author)        \
                .replace('<<glld-version>>',       version)       \
+               .replace('<<glld-version-major>>', version[0])    \
+               .replace('<<glld-version-minor>>', version[2])    \
                .replace('<<glld-licence>>',       licence)       \
                .replace('<<glld-gl-profile>>',    gl_profile)    \
                .replace('<<glld-gl-version>>',    gl_version)    \

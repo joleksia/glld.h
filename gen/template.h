@@ -537,8 +537,8 @@ GLINT void *__glld_dlopen(const char *name) {
 
     /* platform-dependant dynamic object loading */
 #  if defined (GLLD_PLATFORM_LINUX) || \
-      defined (GLLD_PLATFORM_BSD)   || \
-      defined (GLLD_PLATFORM_APPLE)
+      defined (GLLD_PLATFORM_APPLE) || \
+      defined (GLLD_PLATFORM_BSD)
     void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
 
 #  elif defined (GLLD_PLATFORM_WINDOWS)
@@ -558,8 +558,8 @@ GLINT void *__glld_dlsym(void *handle, const char *symbol) {
 
     /* platform-dependant dynamic symbol loading */
 #  if defined (GLLD_PLATFORM_LINUX) || \
-      defined (GLLD_PLATFORM_BSD)   || \
-      defined (GLLD_PLATFORM_APPLE)
+      defined (GLLD_PLATFORM_APPLE) || \
+      defined (GLLD_PLATFORM_BSD)
     void *proc = dlsym(handle, symbol);
 
 #  elif defined (GLLD_PLATFORM_WINDOWS)
@@ -578,8 +578,8 @@ GLINT int __glld_dlclose(void *handle) {
 
     /* platform-dependant dynamic object unloading */
 #  if defined (GLLD_PLATFORM_LINUX) || \
-      defined (GLLD_PLATFORM_BSD)   || \
-      defined (GLLD_PLATFORM_APPLE)
+      defined (GLLD_PLATFORM_APPLE) || \
+      defined (GLLD_PLATFORM_BSD)
     dlclose(handle);
 
 #  elif defined (GLLD_PLATFORM_WINDOWS)

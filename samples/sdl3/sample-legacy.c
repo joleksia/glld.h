@@ -20,7 +20,9 @@ int main(void) {
     if (!context) { return (1); }
 
     if (!SDL_GL_MakeCurrent(window, context)) { return (1); }
-    if (!glld_loader((glld_loader_t) SDL_GL_GetProcAddress)) { return (1); }
+
+    glld_t glld = { 0 };
+    if (!glld_loader(&glld, (glld_loader_t) SDL_GL_GetProcAddress)) { return (1); }
 
     for (int exit = 0; !exit; ) {
         glClearColor(0.1, 0.1, 0.1, 1.0);
@@ -46,6 +48,7 @@ int main(void) {
     }
 
 
+    glld_unload(&glld);
     SDL_GL_DestroyContext(context);
     SDL_DestroyWindow(window);
     SDL_Quit();

@@ -3,7 +3,10 @@
 
 
 int main(void) {
-    if (!glld_load()) { return (1); }
+    glld_t glld = { 0 };
+    if (!glld_load(&glld)) { return (1); }
+    printf("glld.h: %d.%d\n", glld.version.major, glld.version.minor);
+    printf("OpenGL: %d.%d\n", glld.gl.version.major, glld.gl.version.minor);
 
     /* ... */
 
@@ -12,7 +15,7 @@ int main(void) {
     
     /* ... */
     
-    if (!glld_unload()) { return (1); }
+    if (!glld_unload(&glld)) { return (1); }
 
     return (0);
 }

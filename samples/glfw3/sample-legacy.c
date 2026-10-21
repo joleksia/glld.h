@@ -13,7 +13,8 @@ int main(void) {
 
     glfwMakeContextCurrent(window);
 
-    if (!glld_loader((glld_loader_t) glfwGetProcAddress)) { return (1); }
+    glld_t glld = { 0 };
+    if (!glld_loader(&glld, (glld_loader_t) glfwGetProcAddress)) { return (1); }
 
 
     while (!glfwWindowShouldClose(window)) {
@@ -34,6 +35,7 @@ int main(void) {
     }
 
 
+    glld_unload(&glld);
     glfwTerminate();
     return (0);
 }

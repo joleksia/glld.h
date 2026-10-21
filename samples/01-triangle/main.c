@@ -57,8 +57,12 @@ int main(void) {
 
 
     /* init 'glld.h' */
-    if (!glld_loader((glld_loader_t) win_gl_get_proc_address)) { return (1); }
-
+    glld_t glld = { 0 };
+    if (!glld_load(&glld)) { return (1); }
+    printf("glld.h version: %d.%d\n", glld.version.major,
+                                      glld.version.minor);
+    printf("OpenGL version: %d.%d\n", glld.gl.version.major,
+                                      glld.gl.version.minor);
 
     /* create 'shader' */
     GLuint shader = glCreateProgram();
@@ -138,7 +142,7 @@ int main(void) {
     glDeleteProgram(shader), shader = 0;
 
     /* quit */
-    glld_unload();
+    glld_unload(&glld);
     win_quit(library);
     return (0);
 }

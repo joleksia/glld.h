@@ -61,7 +61,8 @@ int main(void) {
     win_gl_make_current(library, context);
 
     /* load OpenGL */
-    if (!glld_loader((glld_loader_t) win_gl_get_proc_address)) { return (1); }
+    glld_t glld = { 0 };
+    if (!glld_loader(&glld, (glld_loader_t) win_gl_get_proc_address)) { return (1); }
 
 
     GLuint sh_v = glCreateShader(GL_VERTEX_SHADER);
@@ -138,6 +139,7 @@ int main(void) {
     glDeleteProgram(shader), shader = 0;
 
     /* quit */
+    glld_unload(&glld);
     win_quit(library);
     return (0);
 }

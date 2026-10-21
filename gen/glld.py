@@ -2,6 +2,7 @@
 
 import os
 import sys
+import traceback
 import xml.etree.ElementTree as ET
 
 
@@ -46,20 +47,10 @@ gl_sc_version_list: list = [
 # ===================
 
 def gl_loadxml(filepath: str) -> ET.ElementTree:
-    try:
-        tree = ET.parse(filepath)
-    except FileNotFoundError as err:
-        print(f'{__file__}: {err}')
-        sys.exit(1)
-    return (tree)
+    return (ET.parse(filepath))
 
 
 def gl_parsexml(tree: ET.ElementTree):
-    root = tree.getroot()
-    if root.tag != 'registry':
-        print(f'{__file__}: root error')
-        sys.exit(1)
-
     # 'parse' dictionary of parsed lists
     parse = { 'enums'      : [],
               'commands'   : [],
@@ -67,7 +58,7 @@ def gl_parsexml(tree: ET.ElementTree):
               'extensions' : [] }
 
     # iterate over the 'registry' node
-    for child in root:
+    for child in tree.getroot():
 
         if child.tag == 'enums':
             parse['enums'].append(gl_parsexml_enums(child))
@@ -605,6 +596,6 @@ if __name__ == '__main__':
         tree = gl_loadxml(f'{path}/xml/gl.xml')
         parse = gl_parsexml(tree)
         opengl_loader(parse)
-    except Exception as err:
-        print(f'{__file__}: {err}')
+    except Exception as e:
+        traceback.print_exception(e)
         sys.exit(1)

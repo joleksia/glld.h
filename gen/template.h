@@ -142,8 +142,9 @@
 #   include <stddef.h>
 #   include <sys/types.h>
 # else
-#   include <cassert>
 #   include <string>
+#   include <cassert>
+#   include <cstring>
 #   include <cstdio>
 #   include <cstdint>
 #   include <cstddef>
@@ -368,7 +369,7 @@ GLAPI int glld_load(glld_t *glld) {
     
     /* try to load 'eglGetProcAddress' symbol */
     if (!load && glld->gl.libEGL) {
-        load = __glld_dlsym(glld->gl.libEGL, "eglGetProcAddress");
+        load = (glld_loader_t) __glld_dlsym(glld->gl.libEGL, "eglGetProcAddress");
 
         /* 'load' succeed */
         if (load) {
@@ -390,11 +391,11 @@ GLAPI int glld_load(glld_t *glld) {
     
     /* try to load 'glXGetProcAddress' symbol */
     if (!load && glld->gl.libGLX) {
-        load = __glld_dlsym(glld->gl.libEGL, "glXGetProcAddress");
+        load = (glld_loader_t) __glld_dlsym(glld->gl.libEGL, "glXGetProcAddress");
     
         /* if failed, try to load 'glXGetProcAddressARB' symbol */
         if (!load) {
-            load = __glld_dlsym(glld->gl.libEGL, "glXGetProcAddressARB");
+            load = (glld_loader_t) __glld_dlsym(glld->gl.libEGL, "glXGetProcAddressARB");
         }
 
         /* 'load' succeed */
@@ -415,7 +416,7 @@ GLAPI int glld_load(glld_t *glld) {
     
     /* try to load 'wglGetProcAddress' symbol */
     if (!load && glld->gl.libWGL) {
-        load = __glld_dlsym(glld->gl.libEGL, "wglGetProcAddress");
+        load = (glld_loader_t) __glld_dlsym(glld->gl.libEGL, "wglGetProcAddress");
 
         /* 'load' succeed */
         if (load) {

@@ -157,57 +157,8 @@ extern "C" {
 
 # endif
 
-/* glld.h */
-
-typedef void *(*glld_loader_t) (const char *);
-
-
-typedef struct glld_s glld_t;
-
-struct glld_s {
-    
-    /* glld version */
-    
-    struct {
-
-        int major;
-        int minor;
-
-    } version;
-
-    /* OpenGL struct */
-
-    struct {
-        
-        /* OpenGL version */
-
-        struct {
-
-            int major;
-            int minor;
-
-        } version;
-
-        /* OpenGL backend handle */
-        
-        void *libEGL,
-             *libGLX,
-             *libWGL;
-
-    } gl;
-
-};
-
-
-GLAPI int glld_load(glld_t *);
-
-GLAPI int glld_loader(glld_t *, glld_loader_t);
-
-GLAPI int glld_unload(glld_t *);
-
-GLAPI void *glld_get_proc_address(const char *);
-
 /* OpenGL */
+/* {{{ */
 
 /* OpenGL versions */
 
@@ -271,11 +222,73 @@ typedef void (APIENTRY *GLVULKANPROCNV)(void);
 /* OpenGL functions */
 
 /* {{{ */
-<<glld-gl-functions>>
+<<glld-gl-function-typedef>>
 /* }}} */
 
+
+typedef struct glld_glapi_s glld_glapi_t;
+
+struct glld_glapi_s {
+
+    /* {{{ */
+    <<glld-gl-function-glapi>>
+    /* }}} */
+
+};
+
+/* }}} */
+
+/* glld.h */
 /* {{{ */
-<<glld-gl-function-macros>>
+
+typedef void *(*glld_loader_t) (const char *);
+
+
+typedef struct glld_s glld_t;
+
+struct glld_s {
+    
+    /* glld version */
+    
+    struct {
+
+        int major;
+        int minor;
+
+    } version;
+
+    /* OpenGL struct */
+
+    struct {
+        
+        /* OpenGL version */
+
+        struct {
+
+            int major;
+            int minor;
+
+        } version;
+
+        /* OpenGL backend handle */
+        
+        void *libEGL,
+             *libGLX,
+             *libWGL;
+
+    } gl;
+
+};
+
+
+GLAPI int glld_load(glld_t *);
+
+GLAPI int glld_loader(glld_t *, glld_loader_t);
+
+GLAPI int glld_unload(glld_t *);
+
+GLAPI void *glld_get_proc_address(const char *);
+
 /* }}} */
 
 # if defined (__cplusplus)
@@ -310,29 +323,6 @@ typedef void (APIENTRY *GLVULKANPROCNV)(void);
 extern "C" {
 
 #  endif /* __cplusplus */
-    
-/* key-value pair array of OpenGL functions */
-struct glld_glapi_s {
-
-#  if !defined (__cplusplus)
-    const char *name;
-#  else
-    const std::string &name;
-#  endif /* __cplusplus */
-
-    void **addr;
-};
-
-static struct glld_glapi_s _glld_glapi[] = {
-   
-    /* {{{ */ 
-<<glld-gl-function-array>>
-    /* }}} */
-
-    /* ... */
-
-    { "", 0 }
-};
 
 /* glld.h */
 
@@ -442,22 +432,7 @@ GLAPI int glld_loader(glld_t *glld, glld_loader_t load) {
     glld->gl.version.minor = 0;
 
     /* 'load' OpenGL functions */
-    for (size_t i = 0; _glld_glapi[i].addr; i++) {
-        /* check if 'addr' already loaded */
-        if (*_glld_glapi[i].addr) { continue; }
-
-        /* 'load' OpenGL function */
-# if !defined (__cplusplus)
-        *_glld_glapi[i].addr = load(_glld_glapi[i].name);
-
-# else
-        *_glld_glapi[i].addr = load(_glld_glapi[i].name.c_str());
-
-# endif /* __cplusplus */
-
-        /* null-check */
-        if (!_glld_glapi[i].addr) { return (0); }
-    } 
+    /* ... */
 
     /* return glld.h version */
     glld->version.major = GLLD_VERSION_MAJOR;

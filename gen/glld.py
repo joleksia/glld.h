@@ -83,7 +83,33 @@ def gl_parsexml(tree: ET.ElementTree):
 # ===========================
 
 def gl_parsexml_types(element: ET.Element):
-    pass
+    result = [ ]
+
+    # iterate over the every child in <types>
+    for child in element:
+        # skip <type comment="...">
+        if child.get('comment'):
+            continue
+
+        item = { 'name'     : child.get('name'),
+                 'value'    : child.text,
+                 'requires' : child.get('requires') }
+
+        # get the inner child nodes
+        name = child.find('name')
+        apientry = child.find('apientry')
+        if apientry is not None:
+            item['value'] += 'APIENTRY'
+            item['value'] += apientry.tail 
+
+        if name is not None:
+            item['name'] = name.text
+            item['value'] += name.text
+            item['value'] += name.tail
+        result.append(item)
+        
+    breakpoint()
+    return (result)
 
 # ===========================
 # SECTION: xml parser - enums

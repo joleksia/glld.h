@@ -81,26 +81,6 @@
 # endif /* __gl3platform_h_ */
 # define __gl3platform_h_ 1
 #
-# if defined (_WIN32) && !defined (APIENTRY) && !defined (__CYGWIN__) && !defined (__SCITECH_SNAP__)
-#  if !defined (WIN32_LEAN_AND_MEAN)
-#   define WIN32_LEAN_AND_MEAN 1
-#  endif
-#  include <windows.h>
-# endif
-#
-# if !defined (APIENTRY)
-#  define APIENTRY
-# endif /* APIENTRY */
-# if !defined (APIENTRYP)
-#  define APIENTRYP APIENTRY *
-# endif /* APIENTRYP */
-# if !defined (GLAPI)
-#  define GLAPI extern
-# endif /* GLAPI */
-# if !defined (GLINT)
-#  define GLINT static
-# endif /* GLINT */
-#
 # /* Define platform macros */
 # if defined (__linux__) || \
      defined (__gnu_linux__)
@@ -133,6 +113,21 @@
 # else
 #  error /* No valid platform found */
 # endif
+#
+# if !defined (APIENTRY)
+#  define APIENTRY
+# endif /* APIENTRY */
+# if !defined (APIENTRYP)
+#  define APIENTRYP APIENTRY *
+# endif /* APIENTRYP */
+#
+# if !defined (GLAPI)
+#  define GLAPI extern
+# endif /* GLAPI */
+#
+#if !defined (GLINT)
+#  define GLINT static
+# endif /* GLINT */
 #
 # if !defined (__cplusplus)
 #   include <string.h>
@@ -180,49 +175,32 @@ static void *libWGL_g = 0;
 /* OpenGL types */
 
 /* {{{ */
-typedef unsigned int GLenum;
-typedef unsigned char GLboolean;
-typedef unsigned int GLbitfield;
-typedef void GLvoid;
-typedef int8_t GLbyte;
-typedef uint8_t GLubyte;
-typedef int16_t GLshort;
-typedef uint16_t GLushort;
-typedef int GLint;
-typedef unsigned int GLuint;
-typedef int32_t GLclampx;
-typedef int GLsizei;
-typedef float GLfloat;
-typedef float GLclampf;
-typedef double GLdouble;
-typedef double GLclampd;
-typedef void *GLeglClientBufferEXT;
-typedef void *GLeglImageOES;
-typedef char GLchar;
-typedef char GLcharARB;
-typedef void *GLhandleARB;
-typedef uint16_t GLhalf;
-typedef uint16_t GLhalfARB;
-typedef int32_t GLfixed;
-typedef intptr_t GLintptr;
-typedef intptr_t GLintptrARB;
-typedef ssize_t GLsizeiptr;
-typedef ssize_t GLsizeiptrARB;
-typedef int64_t GLint64;
-typedef int64_t GLint64EXT;
-typedef uint64_t GLuint64;
-typedef uint64_t GLuint64EXT;
-typedef struct __GLsync *GLsync;
-typedef unsigned short GLhalfNV;
-typedef GLintptr GLvdpauSurfaceNV;
-struct _cl_context;
-struct _cl_event;
-typedef void (APIENTRY *GLDEBUGPROC)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
-typedef void (APIENTRY *GLDEBUGPROCARB)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
-typedef void (APIENTRY *GLDEBUGPROCKHR)(GLenum source,GLenum type,GLuint id,GLenum severity,GLsizei length,const GLchar *message,const void *userParam);
-typedef void (APIENTRY *GLDEBUGPROCAMD)(GLuint id,GLenum category,GLenum severity,GLsizei length,const GLchar *message,void *userParam);
-typedef void (APIENTRY *GLVULKANPROCNV)(void);
-/* }}} */
+/* Standard OpenGL is dependent on 'khrplatform.h' include header.
+ * Due to the nature of single-header libraries we must provide KHR-types provided by the header.
+ * But still, we're relying on standard 'stddef.h' and 'stdint.h' headers.
+ * */
+# if !defined (__khrplatform_h_)
+#  define __khrplatform_h_ 1
+
+typedef int8_t    khronos_int8_t;
+typedef uint8_t   khronos_uint8_t;
+typedef int16_t   khronos_int16_t;
+typedef uint16_t  khronos_uint16_t;
+typedef int32_t   khronos_int32_t;
+typedef uint32_t  khronos_uint32_t;
+typedef int64_t   khronos_int64_t;
+typedef uint64_t  khronos_uint64_t;
+typedef uintptr_t khronos_uintptr_t;
+typedef intptr_t  khronos_intptr_t;
+typedef uintptr_t khronos_usize_t;
+typedef intptr_t  khronos_ssize_t;
+typedef float     khronos_float_t;
+
+# endif /* __khrplatform_h_ */
+
+<<glld-gl-types>>
+
+ /* }}} */
 
 /* OpenGL enums */
 

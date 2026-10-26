@@ -117,6 +117,7 @@
 # if !defined (APIENTRY)
 #  define APIENTRY
 # endif /* APIENTRY */
+#
 # if !defined (APIENTRYP)
 #  define APIENTRYP APIENTRY *
 # endif /* APIENTRYP */
@@ -150,36 +151,12 @@ extern "C" {
 # endif
 
 /* OpenGL */
-/* {{{ */
-
-/* OpenGL versions */
 
 /* {{{ */
-<<glld-gl-macros>>
-/* }}} */
 
-/* OpenGL global objects */
-/* {{{ */
+/* OpenGL 'khrplatform.h' types */
 
-# if !defined (GLLD_NO_GLOBAL_API)
-
-static void *libGL_g  = 0;
-static void *libEGL_g = 0;
-static void *libGLX_g = 0;
-static void *libWGL_g = 0;
-
-# endif /* GLLD_NO_GLOBAL_API */
-
-/* }}} */
-
-/* OpenGL types */
-
-/* {{{ */
-/* Standard OpenGL is dependent on 'khrplatform.h' include header.
- * Due to the nature of single-header libraries we must provide KHR-types provided by the header.
- * But still, we're relying on standard 'stddef.h' and 'stdint.h' headers.
- * */
-# if !defined (__khrplatform_h_)
+# if !defined (__khrplatform_h_) /* {{{ */
 #  define __khrplatform_h_ 1
 
 typedef int8_t    khronos_int8_t;
@@ -196,35 +173,23 @@ typedef uintptr_t khronos_usize_t;
 typedef intptr_t  khronos_ssize_t;
 typedef float     khronos_float_t;
 
-# endif /* __khrplatform_h_ */
+# endif /* __khrplatform_h_ */ /* }}} */
 
-<<glld-gl-types>>
-
- /* }}} */
-
-/* OpenGL enums */
+/* OpenGL features */
 
 /* {{{ */
-<<glld-gl-enums>>
+<<glld-gl-feature>>
 /* }}} */
 
-/* OpenGL functions */
+/* OpenGL extensions */
 
 /* {{{ */
-<<glld-gl-function-typedef>>
+<<glld-gl-extensions>>
 /* }}} */
 
-/* OpenGL functions (extern) */
+/* OpenGL API structure */
 
-/* {{{ */
-# if !defined (GLLD_NO_GLOBAL_API)
-<<glld-gl-function-extern>>
-# endif /* GLLD_NO_GLOBAL_API */
-/* }}} */
-
-/* 'struct glld_glapi_s': OpenGL API structure.
- * */
-struct glld_glapi_s {
+struct glld_glapi_s { /* {{{ */
 
     /* 'libGL': handle to dynamic shared OpenGL object.
      * */
@@ -242,15 +207,50 @@ struct glld_glapi_s {
      * */
     void *libWGL;
 
+    /* OpenGL functions */
+
 /* {{{ */
-<<glld-gl-function-glapi>>
+<<glld-gl-glapi>>
 /* }}} */
 
-};
+}; /* }}} */
+
+/* OpenGL global objects */
+
+/* {{{ */
+
+# if !defined (GLLD_NO_GLOBAL_API)
+
+/* 'libGL_g': handle to dynamic shared OpenGL object.
+ * */
+static void *libGL_g  = 0;
+
+/* 'libEGL_g': handle to dynamic shared EGL object.
+ * */
+static void *libEGL_g = 0;
+
+/* 'libGLX_g': handle to dynamic shared GLX object.
+ * */
+static void *libGLX_g = 0;
+
+/* 'libWGL_g': handle to dynamic shared WGL object.
+ * */
+static void *libWGL_g = 0;
+
+/* OpenGL functions */
+
+/* {{{ */
+<<glld-gl-extern>>
+/* }}} */
+
+# endif /* GLLD_NO_GLOBAL_API */
+
+/* }}} */
 
 /* }}} */
 
 /* glld.h */
+
 /* {{{ */
 
 typedef void *(*glld_loader_t) (const char *);
@@ -294,13 +294,15 @@ extern "C" {
 #  endif /* __cplusplus */
 
 /* OpenGL */
+
 /* {{{ */
 
 /* OpenGL functions */
+
 /* {{{ */
 #  if !defined (GLLD_NO_GLOBAL_API)
 
-<<glld-gl-function-global>>
+<<glld-gl-global>>
 
 #  endif /* GLLD_NO_GLOBAL_API */
 /* }}} */
@@ -308,6 +310,7 @@ extern "C" {
 /* }}} */
 
 /* glld.h */
+
 /* {{{ */
 
 /* static API */
@@ -322,114 +325,113 @@ GLINT int __glld_gl_handle(struct glld_glapi_s *);
 
 GLINT int __glld_gl_loader(struct glld_glapi_s *, glld_loader_t *);
 
-GLINT int __glld_gl_api(struct glld_glapi_s *, glld_loader_t);
+GLINT int __glld_gl_init(struct glld_glapi_s *, glld_loader_t);
+
+GLINT int __glld_gl_bind(struct glld_glapi_s *);
 
 /* public API */
 
-GLAPI int glld_load(struct glld_glapi_s *glapi) {
+GLAPI int glld_load(struct glld_glapi_s *pApi) {
     /* load OpenGL handles */
     struct
-    glld_glapi_s api;
-    if (!__glld_gl_handle(&api)) {
-        return (0);
-    }
+    glld_glapi_s glapi;
+    __glld_gl_handle(&glapi);
 
     /* pick OpenGL loader function */
     glld_loader_t load = 0;
-    if (!__glld_gl_loader(&api, &load)) {
-        glld_unload(&api);
-        return (0);
-    }
+    __glld_gl_loader(&glapi, &load);
 
     /* load OpenGL API */
-    int version = __glld_gl_api(&api, load);
-    if (!version) {
-        glld_unload(&api);
-        return (0);
+    __glld_gl_init(&glapi, load);
+    
+    /* try to bind OpenGL API */
+    __glld_gl_bind(&glapi);
+
+    /* copy 'glapi' to 'pApi' */
+    if (pApi) {
+        *pApi = glapi;
     }
 
-    /* copy 'api' to 'glapi' */
-    if (glapi) {
-        if (!memcpy(glapi, &api, sizeof(struct glld_glapi_s))) {
-            glld_unload(&api);
-            return (0);
-        }
-    }
-
-    /* return 'version' as success code */
-    return (version);
+    /* success */
+    return (GL_NO_ERROR);
 }
 
 
-GLAPI int glld_loader(struct glld_glapi_s *glapi, glld_loader_t load) {
+GLAPI int glld_loader(struct glld_glapi_s *pApi, glld_loader_t pLoad) {
     /* null-check */
-    if (!load) { return (0); }
+    if (!pLoad) { return (0); }
 
     /* load OpenGL handles */
     struct
-    glld_glapi_s api;
-    if (!__glld_gl_handle(&api)) {
-        return (0);
-    }
+    glld_glapi_s glapi;
+    __glld_gl_handle(&glapi);
 
     /* load OpenGL API */
-    int version = __glld_gl_api(&api, load);
-    if (!version) {
-        glld_unload(&api);
-        return (0);
-    }
+    __glld_gl_init(&glapi, pLoad);
+    
+    /* try to bind OpenGL API */
+    __glld_gl_bind(&glapi);
 
-    /* copy 'api' to 'glapi' */
-    if (glapi) {
-        if (!memcpy(glapi, &api, sizeof(struct glld_glapi_s))) {
-            glld_unload(&api);
-            return (0);
-        }
+    /* copy 'glapi' to 'pApi' */
+    if (pApi) {
+        *pApi = glapi;
     }
-
-    /* return 'version' as success code */
-    return (version);
+    
+    /* success */
+    return (GL_NO_ERROR);
 }
 
 
-GLAPI int glld_unload(struct glld_glapi_s *glapi) {
-    /* unload 'glapi' */
-    if (glapi) {
+GLAPI int glld_unload(struct glld_glapi_s *pApi) {
+    /* unload 'pApi' */
+    if (pApi) {
         /* unload OpenGL handle */
-        void *libGL = glapi->libGL;
+        void *libGL = pApi->libGL;
         if (libGL) { __glld_dlclose(libGL); }
         
         /* unload OpenGL backend handles */
-        void *libEGL = glapi->libEGL,
-             *libGLX = glapi->libGLX,
-             *libWGL = glapi->libWGL;
+        void *libEGL = pApi->libEGL,
+             *libGLX = pApi->libGLX,
+             *libWGL = pApi->libWGL;
         if (libEGL) { __glld_dlclose(libEGL); }
         if (libGLX) { __glld_dlclose(libGLX); }
         if (libWGL) { __glld_dlclose(libWGL); }
 
         /* clear 'glapi' */
-        memset(glapi, 0, sizeof(struct glld_glapi_s));
+        memset(pApi, 0, sizeof(struct glld_glapi_s));
+    }
+
+    /* unload global API handles */
+    else {
+        struct
+        glld_glapi_s glapi;
+
+        /* if no global API was unloaded then '__glld_gl_handle' should return them */
+        __glld_gl_handle(&glapi);
+
+        /* call 'glld_unload' on 'glapi' recursively */
+        glld_unload(&glapi);
     }
 
     /* success */
-    return (1);
+    return (GL_NO_ERROR);
 }
 
 
-GLAPI void *glld_get_proc_address(const char *name) {
+GLAPI void *glld_get_proc_address(const char *pName) {
     /* load OpenGL handles */
     struct
-    glld_glapi_s api;
-    if (!__glld_gl_handle(&api)) {
+    glld_glapi_s glapi;
+    if (!__glld_gl_handle(&glapi)) {
         return (0);
     }
 
     /* OpenGL handle */
-    void *libGL = api.libGL;
+    void *libGL = glapi.libGL;
     if (!libGL) { return (0); }
 
-    /* load 'name' symbol from 'libGL' */
-    void *proc = __glld_dlsym(libGL, name);
+    /* load 'pName' symbol from 'libGL' */
+    void *proc = __glld_dlsym(libGL, pName);
     
     /* return 'proc' (or 'null' if failed) */
     return (proc);
@@ -437,18 +439,18 @@ GLAPI void *glld_get_proc_address(const char *name) {
 
 /* static API */
 
-GLINT void *__glld_dlopen(const char *name) {
+GLINT void *__glld_dlopen(const char *pName) {
     /* null-check */
-    if (!name) { return (0); }
+    if (!pName) { return (0); }
 
     /* platform-dependant dynamic object loading */
 #  if defined (GLLD_PLATFORM_LINUX) || \
       defined (GLLD_PLATFORM_APPLE) || \
       defined (GLLD_PLATFORM_BSD)
-    void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+    void *handle = dlopen(pName, RTLD_NOW | RTLD_GLOBAL);
 
 #  elif defined (GLLD_PLATFORM_WINDOWS)
-    HMODULE handle = LoadLibraryA(handle);
+    HMODULE handle = LoadLibraryA(pName);
 
 #  endif
 
@@ -457,19 +459,19 @@ GLINT void *__glld_dlopen(const char *name) {
 }
 
 
-GLINT void *__glld_dlsym(void *handle, const char *symbol) {
+GLINT void *__glld_dlsym(void *pHandle, const char *pName) {
     /* null-check */
-    if (!handle) { return (0); }
-    if (!symbol) { return (0); }
+    if (!pHandle) { return (0); }
+    if (!pName)   { return (0); }
 
     /* platform-dependant dynamic symbol loading */
 #  if defined (GLLD_PLATFORM_LINUX) || \
       defined (GLLD_PLATFORM_APPLE) || \
       defined (GLLD_PLATFORM_BSD)
-    void *proc = dlsym(handle, symbol);
+    void *proc = dlsym(pHandle, pName);
 
 #  elif defined (GLLD_PLATFORM_WINDOWS)
-    HMODULE proc = GetProcAddress(handle, symbol);
+    HMODULE proc = GetProcAddress(pHandle, pName);
 
 #  endif
 
@@ -478,26 +480,27 @@ GLINT void *__glld_dlsym(void *handle, const char *symbol) {
 }
 
 
-GLINT int __glld_dlclose(void *handle) {
+GLINT int __glld_dlclose(void *pHandle) {
     /* null-check */
-    if (!handle) { return (0); }
+    if (!pHandle) { return (0); }
 
     /* platform-dependant dynamic object unloading */
 #  if defined (GLLD_PLATFORM_LINUX) || \
       defined (GLLD_PLATFORM_APPLE) || \
       defined (GLLD_PLATFORM_BSD)
-    dlclose(handle);
+    dlclose(pHandle);
 
 #  elif defined (GLLD_PLATFORM_WINDOWS)
-    FreeLibrary(handle);
+    FreeLibrary(pHandle);
 
 #  endif
 
-    return (1);
+    /* success */
+    return (GL_NO_ERROR);
 }
 
 
-GLINT int __glld_gl_handle(struct glld_glapi_s *glapi) {
+GLINT int __glld_gl_handle(struct glld_glapi_s *pApi) {
 
     /* 'libEGL' handle */
 #  if defined (GLLD_NO_GLOBAL_API)
@@ -617,32 +620,32 @@ GLINT int __glld_gl_handle(struct glld_glapi_s *glapi) {
 #  endif
     }
 
-    /* return handles to 'glapi' if not null */
-    if (glapi) {
-        glapi->libGL  = libGL;
-        glapi->libEGL = libEGL;
-        glapi->libGLX = libGLX;
-        glapi->libWGL = libWGL;
+    /* return handles to 'pApi' if not null */
+    if (pApi) {
+        pApi->libGL  = libGL;
+        pApi->libEGL = libEGL;
+        pApi->libGLX = libGLX;
+        pApi->libWGL = libWGL;
     }
 
     /* success */
-    return (1);
+    return (GL_NO_ERROR);
 }
 
 
-GLINT int __glld_gl_loader(struct glld_glapi_s *glapi, glld_loader_t *result) {
+GLINT int __glld_gl_loader(struct glld_glapi_s *pApi, glld_loader_t *pLoad) {
     /* null-check */
-    if (!glapi) { return (0); }
+    if (!pApi) { return (0); }
     
     /* load 'eglGetProcAddress' function */
-    void *libEGL = glapi->libEGL;
+    void *libEGL = pApi->libEGL;
     glld_loader_t egl_handle = 0;
     if (libEGL) {
         egl_handle = (glld_loader_t) __glld_dlsym(libEGL, "eglGetProcAddress");
     }
 
     /* load 'glXGetProcAddress'/'glXGetProcAddressARB' function */
-    void *libGLX = glapi->libGLX;
+    void *libGLX = pApi->libGLX;
     glld_loader_t glx_load = 0;
     if (libGLX) {
         glx_load = (glld_loader_t) __glld_dlsym(libGLX, "glXGetProcAddress");
@@ -652,7 +655,7 @@ GLINT int __glld_gl_loader(struct glld_glapi_s *glapi, glld_loader_t *result) {
     }
 
     /* load 'wglGetProcAddress' function */
-    void *libWGL = glapi->libWGL;
+    void *libWGL = pApi->libWGL;
     glld_loader_t wgl_handle = 0;
     if (libWGL) {
         wgl_handle = (glld_loader_t) __glld_dlsym(libGLX, "wglGetProcAddress");
@@ -678,33 +681,57 @@ GLINT int __glld_gl_loader(struct glld_glapi_s *glapi, glld_loader_t *result) {
         load = (glld_loader_t) glld_get_proc_address;
     }
 
-    /* return 'result' */
-    if (result) { *result = load; }
+    /* return 'pLoad' */
+    if (pLoad) { *pLoad = load; }
 
     /* success */
-    return (1);
+    return (GL_NO_ERROR);
 }
 
 
-GLINT int __glld_gl_api(struct glld_glapi_s *glapi, glld_loader_t load) {
+GLINT int __glld_gl_init(struct glld_glapi_s *pApi, glld_loader_t pLoad) {
     /* null-check */
-    if (!glapi) { return (0); }
-    if (!load)  { return (0); }
+    if (!pApi)  { return (0); }
+    if (!pLoad) { return (0); }
 
-    /* load OpenGL functions */
+    /* OpenGL functions */
     /* {{{ */
-<<glld-gl-function-load>>
+<<glld-gl-load>>
     /* }}} */
-    
-    /* return OpenGL version */
-    int major = 0;
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-
-    int minor = 0;
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
 
     /* success */
-    return (major * 10 + minor);
+    return (GL_NO_ERROR);
+}
+
+
+GLINT int __glld_gl_bind(struct glld_glapi_s *pApi) {
+    /* null-check */
+    if (!pApi) { return (0); }
+
+#  if defined (GLLD_NO_GLOBAL_API)
+
+    /* global API disabled: can't bind to global API */
+    return (GL_INVALID_OPERATION);
+
+#  else    
+
+    /* OpenGL global handles */
+    /* {{{ */
+    libGL_g  = pApi->libGL;
+    libEGL_g = pApi->libEGL;
+    libGLX_g = pApi->libGLX;
+    libWGL_g = pApi->libWGL;
+    /* }}} */
+
+    /* OpenGL global API */
+    /* {{{ */
+<<glld-gl-bind>>
+    /* }}} */
+
+    return (GL_NO_ERROR);
+
+#  endif
+
 }
 
 /* }}} */

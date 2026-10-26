@@ -4,9 +4,10 @@ MK_ROOT		= $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 
 # ========
 
-CC			= cc
-CFLAGS		= -Wall -Wextra -Werror -std=c99 -ggdb3
-LFLAGS		= -lSDL2
+CC		= cc
+CXX		= c++
+CFLAGS 	= -Wall -Wextra -Werror -ggdb3
+LFLAGS	= -lSDL2
 
 # ========
 

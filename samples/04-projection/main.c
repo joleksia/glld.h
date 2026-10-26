@@ -66,6 +66,9 @@ static const GLchar *glsl[] = {
 
 
 int main(int ac, char **av) {
+    /* check if 'ac' is as expected */
+    if (ac < 2) { return (1); }
+    
     /* init 'window.h' */
     library_t library = 0;
     win_init(&library);
@@ -85,7 +88,7 @@ int main(int ac, char **av) {
 
 
     /* init 'glld.h' */
-    if (!glld_loader((glld_loader_t) win_gl_get_proc_address)) { return (1); }
+    glld_loader(0, (glld_loader_t) win_gl_get_proc_address);
 
 
     /* load 'image' */
@@ -241,7 +244,7 @@ int main(int ac, char **av) {
     stbi_image_free(image), image = 0;
 
     /* quit */
-    glld_unload();
+    glld_unload(0);
     win_quit(library);
     return (0);
 }

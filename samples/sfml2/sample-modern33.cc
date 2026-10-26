@@ -57,9 +57,7 @@ int main(void) {
     
     sf::Window window(sf::VideoMode( { 800, 600 } ), "glld.h - SFML sample", sf::Style::Titlebar | sf::Style::Close, settings);
     if (!window.setActive()) { return (1); }
-
-    glld_t glld = { }
-    if (!glld_load(&glld)) { return (1); }
+    glld_load(0);
     
     
     GLuint sh_v = glCreateShader(GL_VERTEX_SHADER);
@@ -134,7 +132,6 @@ int main(void) {
     glDeleteVertexArrays(1, &vao), vao = 0;
     glDeleteProgram(shader), shader = 0;
     
-    if (!glld_unload(&glld)) { return (1); }
-    
+    glld_unload(0);
     return (0);
 }

@@ -17,7 +17,7 @@ There's no need to link with any library, unless you explicitly specify one of 3
 #include "glld.h"
 
 int main(void) {
-    if (!glldLoadGL()) { return (1); }
+    if (!glld_load(0)) { return (1); }
 
     /* ... */
     
@@ -26,6 +26,7 @@ int main(void) {
 
     /* ... */
 
+    glld_unload(0);
     return (0);
 }
 ```

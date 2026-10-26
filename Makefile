@@ -5,6 +5,16 @@ MK_NAME	= glld
 
 # ========
 
+PY		= python3
+
+# ========
+
+CC		= cc
+CXX		= c++
+CFLAGS 	= -Wall -Wextra -Werror -ggdb3
+
+# ========
+
 TARGET	= $(MK_ROOT)$(MK_NAME).h
 GPATH	= $(MK_ROOT)gen/$(MK_NAME).py
 
@@ -30,11 +40,11 @@ remove :
 .PHONY : gen
 
 gen :
-	python3 $(GPATH)
+	$(PY) $(GPATH)
 
 .PHONY : samples
 
 samples :
-	make -C $(MK_ROOT)samples/
+	make -C $(MK_ROOT)samples/ CC="$(CC)" CXX="$(CXX)" CFLAGS="$(CFLAGS)"
 
 # ========

@@ -4,18 +4,19 @@ MK_ROOT		= $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 
 # ========
 
-CC			= c++
-CFLAGS		= -Wall -Wextra -std=c++17 -ggdb3
-LFLAGS		= -lsfml-system -lsfml-window
+CC		= cc
+CXX		= c++
+CFLAGS 	= -Wall -Wextra -Werror -ggdb3
+LFLAGS	= -lsfml-system -lsfml-window
 
 # ========
 
 .PHONY : all
 
 all :
-	-$(CC) $(CFLAGS) -o $(MK_ROOT)sample-legacy.out $(MK_ROOT)sample-legacy.cc $(LFLAGS)
-	-$(CC) $(CFLAGS) -o $(MK_ROOT)sample-modern33.out $(MK_ROOT)sample-modern33.cc $(LFLAGS)
-	-$(CC) $(CFLAGS) -o $(MK_ROOT)sample-modern46.out $(MK_ROOT)sample-modern46.cc $(LFLAGS)
+	-$(CXX) $(CFLAGS) -o $(MK_ROOT)sample-legacy.out $(MK_ROOT)sample-legacy.cc $(LFLAGS)
+	-$(CXX) $(CFLAGS) -o $(MK_ROOT)sample-modern33.out $(MK_ROOT)sample-modern33.cc $(LFLAGS)
+	-$(CXX) $(CFLAGS) -o $(MK_ROOT)sample-modern46.out $(MK_ROOT)sample-modern46.cc $(LFLAGS)
 
 .PHONY : clean
 

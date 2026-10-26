@@ -23,8 +23,7 @@ int main(void) {
     win_gl_make_current(library, context);
 
     /* load OpenGL */
-    glld_t glld = { 0 };
-    if (!glld_loader(&glld, (glld_loader_t) win_gl_get_proc_address)) { return (1); }
+    glld_loader(0, (glld_loader_t) win_gl_get_proc_address);
 
     for (int exit = 0; !exit; ) {
         /* render */
@@ -55,7 +54,7 @@ int main(void) {
     }
 
     /* quit */
-    glld_unload(&glld);
+    glld_unload(0);
     win_quit(library);
     return (0);
 }

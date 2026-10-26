@@ -56,7 +56,7 @@ int main(void) {
     if (!context) { return (1); }
 
     if (!SDL_GL_MakeCurrent(window, context)) { return (1); }
-    if (!glld_loader((glld_loader_t) SDL_GL_GetProcAddress)) { return (1); }
+    glld_loader(0, (glld_loader_t) SDL_GL_GetProcAddress);
     
 
     GLuint sh_v = glCreateShader(GL_VERTEX_SHADER);
@@ -121,6 +121,7 @@ int main(void) {
     glDeleteVertexArrays(1, &vao), vao = 0;
     glDeleteProgram(shader), shader = 0;
 
+    glld_unload(0);
     SDL_GL_DeleteContext(context);
     SDL_DestroyWindow(window);
     SDL_Quit();

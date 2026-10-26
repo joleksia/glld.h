@@ -52,9 +52,7 @@ int main(void) {
     if (!window) { return (1); }
 
     glfwMakeContextCurrent(window);
-
-    glld_t glld = { 0 };
-    if (!glld_loader(&glld, (glld_loader_t) glfwGetProcAddress)) { return (1); }
+    glld_loader(0, (glld_loader_t) glfwGetProcAddress);
     
 
     GLuint sh_v = glCreateShader(GL_VERTEX_SHADER);
@@ -113,7 +111,7 @@ int main(void) {
     glDeleteVertexArrays(1, &vao), vao = 0;
     glDeleteProgram(shader), shader = 0;
 
-    glld_unload(&glld);
+    glld_unload(0);
     glfwTerminate();
     return (0);
 }

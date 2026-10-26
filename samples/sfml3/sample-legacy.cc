@@ -13,9 +13,7 @@
 int main(void) {
     sf::Window window(sf::VideoMode( { 800, 600 } ), "glld.h - SFML sample", sf::Style::Default, sf::State::Windowed);
     if (!window.setActive()) { return (1); }
-
-    glld_t glld = { };
-    if (!glld_load(&glld)) { return (1); }
+    glld_load(0);
 
     while (window.isOpen()) {
         glClearColor(0.1, 0.1, 0.1, 1.0);
@@ -36,7 +34,6 @@ int main(void) {
         }
     }
     
-    if (!glld_unload(&glld)) { return (1); }
-    
+    glld_unload(0);
     return (0);
 }

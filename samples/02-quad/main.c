@@ -57,7 +57,7 @@ int main(void) {
 
 
     /* init 'glld.h' */
-    if (!glld_loader((glld_loader_t) win_gl_get_proc_address)) { return (1); }
+    glld_loader(0, (glld_loader_t) win_gl_get_proc_address);
 
 
     /* create 'shader' */
@@ -153,7 +153,7 @@ int main(void) {
     glDeleteProgram(shader), shader = 0;
 
     /* quit */
-    glld_unload();
+    glld_unload(0);
     win_quit(library);
     return (0);
 }

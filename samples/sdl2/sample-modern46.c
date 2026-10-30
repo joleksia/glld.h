@@ -44,10 +44,10 @@ GLuint g_indices[] = {
 
 
 int main(void) {
-    if (!SDL_Init(SDL_INIT_VIDEO)) { return (1); }
-    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4)) { return (1); }
-    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6)) { return (1); }
-    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)) { return (1); }
+    if (SDL_Init(SDL_INIT_VIDEO)) { return (1); }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4)) { return (1); }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6)) { return (1); }
+    if (SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)) { return (1); }
 
     SDL_Window *window = SDL_CreateWindow("glld.h - SDL2 sample", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
     if (!window) { return (1); }
@@ -55,7 +55,7 @@ int main(void) {
     SDL_GLContext context = SDL_GL_CreateContext(window);
     if (!context) { return (1); }
 
-    if (!SDL_GL_MakeCurrent(window, context)) { return (1); }
+    if (SDL_GL_MakeCurrent(window, context)) { return (1); }
     glld_loader(0, (glld_loader_t) SDL_GL_GetProcAddress);
     
 
@@ -77,7 +77,7 @@ int main(void) {
     glDeleteShader(sh_f), sh_f = 0;
     
 
-    GLuint vao,
+    GLuint vao;
     glCreateVertexArrays(1, &vao);
                 
     GLuint vbo, ibo;

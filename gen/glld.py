@@ -36,22 +36,28 @@ def gl_parsexml(tree: ET.ElementTree):
     for child in tree.getroot():
 
         if child.tag == 'types':
-            parse['types'].extend(gl_parsexml_types(child))
+            types = gl_parsexml_types(child)
+            if types is not None:
+                parse['types'].extend(types)
 
         elif child.tag == 'enums':
-            parse['enums'].append(gl_parsexml_enums(child))
+            enums = gl_parsexml_enums(child)
+            if enums is not None:
+                parse['enums'].append(enums)
 
         elif child.tag == 'commands':
-            parse['commands'].append(gl_parsexml_commands(child))
+            commands = gl_parsexml_commands(child)
+            if commands is not None:
+                parse['commands'].append(commands)
 
         elif child.tag == 'feature':
             feature = gl_parsexml_feature(child)
-            if feature:
+            if feature is not None:
                 parse['feature'].append(feature)
 
         elif child.tag == 'extensions':
             extensions = gl_parsexml_extensions(child)
-            if extensions:
+            if extensions is not None:
                 parse['extensions'].extend(extensions)
 
     return (parse)
@@ -70,12 +76,12 @@ def gl_parsexml_types(element: ET.Element):
                  'requires' : child.get('requires') }
 
         # get the inner child nodes
-        name = child.find('name')
         apientry = child.find('apientry')
         if apientry is not None:
             item['value'] += 'APIENTRY'
             item['value'] += apientry.tail 
 
+        name = child.find('name')
         if name is not None:
             item['name'] = name.text
             item['value'] += name.text
@@ -227,7 +233,7 @@ def gl_parsexml_require_dependencies(parse, feature):
     for command in f_command:
         # get proto's 'ptype'
         ptype = command['proto']['ptype']
-
+        
         # find type matching 'ptype'
         for type in types:
             if type['name'] in ptype and type not in result:
@@ -258,8 +264,10 @@ def gl_parsexml_feature(element: ET.Element):
     if result['api'] != 'gl':
         return (None)
 
-    for require in element.findall('require'):
-        result['require'].append(gl_parsexml_require(require))
+    for requires in element.findall('require'):
+        require = gl_parsexml_require(requires)
+        if require is not None:
+            result['require'].append(require)
 
     return (result)
 
@@ -275,14 +283,15 @@ def gl_parsexml_extensions(element: ET.Element):
                       'supported' : child.get('supported'),
                       'require'   : [ ] }
 
-        # 'gl' and 'glcore' not supported: return 'None'
-        breakpoint()
+        # 'gl' and 'glcore' not supported: skip
         supported = extension['supported'].split('|')
         if 'gl' not in supported and 'glcore' not in supported:
-            return (None)
-
-        for require in child.findall('require'):
-                extension['require'].append(gl_parsexml_require(require))
+            continue
+    
+        for requires in child.findall('require'):
+            require = gl_parsexml_require(requires)
+            if require is not None:
+                extension['require'].append(require)
 
         result.append(extension)
 
@@ -310,13 +319,12 @@ def glld_c_template(parse, input, output):
 
     # Advanced templates...
     
-    fstr = fstr.replace('<<glld-gl-feature>>',      glld_c_gl_main(parse, parse['feature']))    \
-               .replace('<<glld-gl-extensions>>',   glld_c_gl_main(parse, parse['extensions'])) \
-               .replace('<<glld-gl-glapi>>',        glld_c_gl_glapi(parse))                     \
-               .replace('<<glld-gl-extern>>',       glld_c_gl_extern(parse))                    \
-               .replace('<<glld-gl-global>>',       glld_c_gl_global(parse))                    \
-               .replace('<<glld-gl-load>>',         glld_c_gl_load(parse))                      \
-               .replace('<<glld-gl-bind>>',         glld_c_gl_bind(parse))                      \
+    fstr = fstr.replace('<<glld-gl-main>>',     glld_c_gl_main(parse))                      \
+               .replace('<<glld-gl-glapi>>',    glld_c_gl_declare(parse, prefix='\t'))      \
+               .replace('<<glld-gl-extern>>',   glld_c_gl_declare(parse, prefix='extern'))  \
+               .replace('<<glld-gl-global>>',   glld_c_gl_declare(parse, prefix=None))      \
+               .replace('<<glld-gl-load>>',     glld_c_gl_load(parse))                      \
+               .replace('<<glld-gl-bind>>',     glld_c_gl_bind(parse))                      \
 
     # open and write 'output' file
     with open(output, 'w') as f:
@@ -328,7 +336,7 @@ u_type = [ ]
 u_enum = [ ]
 u_command = [ ]
 
-def glld_c_gl_main(parse, bases):
+def glld_c_gl_main(parse):
     types = parse['types']
     types_names = { }
     for type in types:
@@ -351,242 +359,119 @@ def glld_c_gl_main(parse, bases):
     global u_enum
     global u_command
 
-    lines = [ ]
-    for base in bases:
-        requires = base['require']
+    def logic(bases):
+        lines = [ ]
+        for base in bases:
+            requires = base['require']
 
-        # extract required types, enums and commands from 'feature' 
-        r_type = [ ]
-        r_enum = [ ]
-        r_command = [ ]
-        for require in requires:
-            r_type.extend(require['type'])
-            r_enum.extend(require['enum'])
-            r_command.extend(require['command'])
-    
-        # extract the list of type dependencies of this 'base'
-        d_type = gl_parsexml_require_dependencies(parse, base)
+            # extract required types, enums and commands from 'feature' 
+            r_type = [ ]
+            r_enum = [ ]
+            r_command = [ ]
+            for require in requires:
+                r_type.extend(require['type'])
+                r_enum.extend(require['enum'])
+                r_command.extend(require['command'])
+        
+            # extract the list of type dependencies of this 'base'
+            d_type = gl_parsexml_require_dependencies(parse, base)
 
-        # names-to-object mapping 
-        f_type = [ types_names[name] for name in r_type if name in types_names ]
-        f_enum = [ enums_names[name] for name in r_enum if name in enums_names ]
-        f_command = [ commands_names[name] for name in r_command if name in commands_names ]
+            # names-to-object mapping 
+            f_type = [ types_names[name] for name in r_type if name in types_names ]
+            f_enum = [ enums_names[name] for name in r_enum if name in enums_names ]
+            f_command = [ commands_names[name] for name in r_command if name in commands_names ]
+           
+            # append absent, non-used type dependencies
+            f_type.extend( [ type for type in d_type if type not in u_type and type not in f_type ] )
+            
+            # extract already used objects
+            f_type = [ type for type in f_type if type not in u_type ]
+            f_enum = [ enum for enum in f_enum if enum not in u_enum ]
+            f_command = [ command for command in f_command if command not in u_command ]
+            
+            # append already used objects
+            u_type.extend( [ type for type in f_type if type not in u_type ] )
+            u_enum.extend( [ enum for enum in f_enum if enum not in u_enum ] )
+            u_command.extend( [ command for command in f_command if command not in u_command ] )
+
+            # insert lines
+            name = base['name']
+            lines.append(f'# if !defined ({name}) /* {{{{{{ */')
+            lines.append(f'#  define {name} 1')
+            
+            # insert 'f_enum'
+            if len(f_enum):
+                for enum in f_enum:
+                    ename  = enum['name']
+                    evalue = enum['value']
+                    lines.append(f'#  define {ename} {evalue}')
+           
+            # insert 'f_type'
+            if len(f_type):
+                lines.append('')
+                for type in f_type:
+                    lines.append(type['value'])
        
-        # append absent, non-used type dependencies
-        f_type.extend( [ type for type in d_type if type not in u_type and type not in f_type ] )
-        
-        # extract already used objects
-        f_type = [ type for type in f_type if type not in u_type ]
-        f_enum = [ enum for enum in f_enum if enum not in u_enum ]
-        f_command = [ command for command in f_command if command not in u_command ]
-        
-        # append already used objects
-        u_type.extend( [ type for type in f_type if type not in u_type ] )
-        u_enum.extend( [ enum for enum in f_enum if enum not in u_enum ] )
-        u_command.extend( [ command for command in f_command if command not in u_command ] )
+            # insert 'f_command'
+            if len(f_command):
+                lines.append('')
+                for command in f_command:
+                    param = [ ]
+                    for child in command['param']:
+                        ptype = child['ptype']
+                        param.append(ptype)
+                    
+                    proto = command['proto']
+                    ptype = proto['ptype']
+                    pname = proto['pname']
 
-        # insert lines
-        name = base['name']
-        lines.append(f'# if !defined ({name}) /* {{{{{{ */')
-        lines.append(f'#  define {name} 1')
-        
-        # insert 'f_enum'
-        if len(f_enum):
-            for enum in f_enum:
-                ename  = enum['name']
-                evalue = enum['value']
-                lines.append(f'#  define {ename} {evalue}')
-       
-        # insert 'f_type'
-        if len(f_type):
-            lines.append('')
-            for type in f_type:
-                lines.append(type['value'])
-   
-        # insert 'f_command'
-        if len(f_command):
-            lines.append('')
-            for command in f_command:
-                param = [ ]
-                for child in command['param']:
-                    ptype = child['ptype']
-                    param.append(ptype)
-                
-                proto = command['proto']
-                ptype = proto['ptype']
-                pname = proto['pname']
-
-                lines.append(f'typedef {ptype} (APIENTRY *PFN{pname.upper()}PROC) ({", ".join(param)});')
-            lines.append('')
-        lines.append(f'# endif /* {name} */ /* }}}}}} */')
-    return ('\n'.join(lines))
-
-
-def glld_c_gl_glapi(parse):
-    commands = parse['commands']
-    commands_names = { }
-    for command in commands:
-        for child in command['command']:
-            commands_names[child['pname']] = child
-
-    lines = [ ] 
-    
-    features = parse['feature']
-    for feature in features:
-        requires = feature['require']
-
-        # extract required commands from 'feature' 
-        r_command = [ ]
-        for require in requires:
-            r_command.extend(require['command'])
-
-        # match requirements to desired commands
-        f_command = [ commands_names[name] for name in r_command if name in commands_names ]
-
-        # insert 'f_command'
-        if len(f_command):
-            for command in f_command:
-                pname = command['pname']
-                line  = f'\tPFN{pname.upper()}PROC {pname};'
-                if line not in lines:
-                    lines.append(line)
-    
-    extensions = parse['extensions']
-    for extension in extensions:
-        requires = extension['require']
-
-        # extract required commands from 'extension' 
-        r_command = [ ]
-        for require in requires:
-            r_command.extend(require['command'])
-
-        # match requirements to desired commands
-        f_command = [ commands_names[name] for name in r_command if name in commands_names ]
-
-        # insert 'f_command'
-        if len(f_command):
-            for command in f_command:
-                pname = command['pname']
-                line  = f'\tPFN{pname.upper()}PROC {pname};'
-                if line not in lines:
-                    lines.append(line)
-    
-    return ('\n'.join(lines))
-
-
-def glld_c_gl_extern(parse):
-    commands = parse['commands']
-    commands_names = { }
-    for command in commands:
-        for child in command['command']:
-            commands_names[child['pname']] = child
+                    lines.append(f'typedef {ptype} (APIENTRY *PFN{pname.upper()}PROC) ({", ".join(param)});')
+                lines.append('')
+            lines.append(f'# endif /* {name} */ /* }}}}}} */')
+        return (lines)
 
     lines = [ ]
-    
-    features = parse['feature']
-    for feature in features:
-        requires = feature['require']
-
-        # extract required commands from 'feature' 
-        r_command = [ ]
-        for require in requires:
-            r_command.extend(require['command'])
-
-        # match requirements to desired commands
-        f_command = [ commands_names[name] for name in r_command if name in commands_names ]
-
-        # insert lines
-        name = feature['name']
-        lines.append(f'# if defined ({name}) /* {{{{{{ */')
-       
-        # insert 'f_command'
-        if len(f_command):
-            lines.append('')
-            for command in f_command:
-                name = command['pname']
-                line = f'extern PFN{name.upper()}PROC {name};'
-                lines.append(line)
-            lines.append('')
-        lines.append(f'# endif /* {name} */ /* }}}}}} */')
-    
-    extensions = parse['extensions']
-    for extension in extensions:
-        requires = extension['require']
-
-        # extract required commands from 'extension' 
-        r_command = [ ]
-        for require in requires:
-            r_command.extend(require['command'])
-
-        # match requirements to desired commands
-        f_command = [ commands_names[name] for name in r_command if name in commands_names ]
-
-        # insert lines
-        name = extension['name']
-        lines.append(f'# if defined ({name}) /* {{{{{{ */')
-       
-        # insert 'f_command'
-        if len(f_command):
-            lines.append('')
-            for command in f_command:
-                name = command['pname']
-                line = f'extern PFN{name.upper()}PROC {name};'
-                lines.append(line)
-            lines.append('')
-        lines.append(f'# endif /* {name} */ /* }}}}}} */')
-    
+    lines.extend(logic(parse['feature']))
+    lines.extend(logic(parse['extensions']))
     return ('\n'.join(lines))
 
 
-def glld_c_gl_global(parse):
+def glld_c_gl_declare(parse, prefix: str | None):
     commands = parse['commands']
     commands_names = { }
     for command in commands:
         for child in command['command']:
             commands_names[child['pname']] = child
 
-    lines = [ ] 
-    
-    features = parse['feature']
-    for feature in features:
-        requires = feature['require']
+    def logic(bases):
+        lines = [ ]
+        for base in bases:
+            r_command = [ ]
+            for require in base['require']:
+                r_command.extend(require['command'])
+            f_command = [ commands_names[name] for name in r_command if name in commands_names ]
+        
+            # insert 'f_command'
+            if len(f_command):
+                for command in f_command:
+                    line = ''
+                    if prefix:
+                        line += f'{prefix} '
+                    
+                    pname = command['pname']
+                    if pname:
+                        line += f'PFN{pname.upper()}PROC {pname};'
 
-        # extract required commands from 'feature' 
-        r_command = [ ]
-        for require in requires:
-            r_command.extend(require['command'])
+                    line = line.strip()
+                    if line not in lines:
+                        lines.append(line)
+        return (lines)
+        
 
-        # match requirements to desired commands
-        f_command = [ commands_names[name] for name in r_command if name in commands_names ]
-
-        # insert 'f_command'
-        if len(f_command):
-            for command in f_command:
-                pname = command['pname']
-                line  = f'PFN{pname.upper()}PROC {pname};'
-                if line not in lines:
-                    lines.append(line)
-    
-    extensions = parse['extensions']
-    for extension in extensions:
-        requires = extension['require']
-
-        # extract required commands from 'extension' 
-        r_command = [ ]
-        for require in requires:
-            r_command.extend(require['command'])
-
-        # match requirements to desired commands
-        f_command = [ commands_names[name] for name in r_command if name in commands_names ]
-
-        # insert 'f_command'
-        if len(f_command):
-            for command in f_command:
-                pname = command['pname']
-                line  = f'PFN{pname.upper()}PROC {pname};'
-                if line not in lines:
-                    lines.append(line)
-    
+    # list of 'lines'
+    lines = [ ]
+    lines.extend(logic(parse['feature']))
+    lines.extend(logic(parse['extensions']))
     return ('\n'.join(lines))
 
 

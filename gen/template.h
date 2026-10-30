@@ -175,16 +175,10 @@ typedef float     khronos_float_t;
 
 # endif /* __khrplatform_h_ */ /* }}} */
 
-/* OpenGL features */
+/* OpenGL main */
 
 /* {{{ */
-<<glld-gl-feature>>
-/* }}} */
-
-/* OpenGL extensions */
-
-/* {{{ */
-<<glld-gl-extensions>>
+<<glld-gl-main>>
 /* }}} */
 
 /* OpenGL API structure */

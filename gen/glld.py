@@ -444,6 +444,14 @@ if __name__ == '__main__':
         gl_xml = gl_loadxml('gen/xml/gl.xml')
         gl_parse = gl_parsexml(gl_xml)
         
+        # load and parse 'glx.xml'
+        glx_xml = gl_loadxml('gen/xml/glx.xml')
+        glx_parse = gl_parsexml(glx_xml)
+        
+        # load and parse 'wgl.xml'
+        wgl_xml = gl_loadxml('gen/xml/wgl.xml')
+        wgl_parse = gl_parsexml(wgl_xml)
+        
         # output module: C Header
         glld_c_template(gl_parse, 'gen/template.h', 'glld.h')
 

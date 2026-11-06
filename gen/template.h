@@ -217,19 +217,19 @@ struct glld_glapi_s { /* {{{ */
 
 /* 'libGL_g': handle to dynamic shared OpenGL object.
  * */
-static void *libGL_g  = 0;
+extern void *libGL_g;
 
 /* 'libEGL_g': handle to dynamic shared EGL object.
  * */
-static void *libEGL_g = 0;
+extern void *libEGL_g;
 
 /* 'libGLX_g': handle to dynamic shared GLX object.
  * */
-static void *libGLX_g = 0;
+extern void *libGLX_g;
 
 /* 'libWGL_g': handle to dynamic shared WGL object.
  * */
-static void *libWGL_g = 0;
+extern void *libWGL_g;
 
 /* OpenGL functions */
 
@@ -299,6 +299,32 @@ extern "C" {
 <<glld-gl-global>>
 
 #  endif /* GLLD_NO_GLOBAL_API */
+/* }}} */
+
+/* OpenGL global objects */
+
+/* {{{ */
+
+# if !defined (GLLD_NO_GLOBAL_API)
+
+/* 'libGL_g': handle to dynamic shared OpenGL object.
+ * */
+void *libGL_g  = 0;
+
+/* 'libEGL_g': handle to dynamic shared EGL object.
+ * */
+void *libEGL_g = 0;
+
+/* 'libGLX_g': handle to dynamic shared GLX object.
+ * */
+void *libGLX_g = 0;
+
+/* 'libWGL_g': handle to dynamic shared WGL object.
+ * */
+void *libWGL_g = 0;
+
+# endif /* GLLD_NO_GLOBAL_API */
+
 /* }}} */
 
 /* }}} */
